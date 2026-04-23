@@ -180,7 +180,7 @@ uniform lowp float u_spp_halo_width;
 uniform lowp float u_spp_halo_blur;
 uniform lowp float u_spp_emissive_strength;
 uniform lowp float u_spp_occlusion_opacity;
-uniform lowp float u_spp_z_offset;
+uniform highp float u_spp_z_offset;
 /// [cos(angle), sin(angle)] for translate-anchor rotation; [1,0] = no rotation (viewport anchor).
 uniform lowp vec2 u_spp_translate_rotation;
 
@@ -360,7 +360,7 @@ SymbolPaintProperties readSymbolPaintProperties() {
 #pragma mapbox: define lowp float halo_blur
 #pragma mapbox: define lowp float emissive_strength
 #pragma mapbox: define lowp float occlusion_opacity
-#pragma mapbox: define lowp float z_offset
+#pragma mapbox: define highp float z_offset
 
 #endif // USE_PAINT_PROPERTIES_UBO
 
@@ -386,7 +386,7 @@ void main() {
     v_emissive_strength = paint_properties.emissive_strength;
 #endif
     lowp float occlusion_opacity = paint_properties.occlusion_opacity;
-    lowp float z_offset = paint_properties.z_offset;
+    highp float z_offset = paint_properties.z_offset;
 
 #else
     /// Pragma-based paint property initializations.
@@ -398,7 +398,7 @@ void main() {
     #pragma mapbox: initialize lowp float halo_blur
     #pragma mapbox: initialize lowp float emissive_strength
     #pragma mapbox: initialize lowp float occlusion_opacity
-    #pragma mapbox: initialize lowp float z_offset
+    #pragma mapbox: initialize highp float z_offset
 
 #endif // USE_PAINT_PROPERTIES_UBO
 
