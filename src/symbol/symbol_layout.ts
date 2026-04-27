@@ -956,7 +956,7 @@ function fitIconsToText(bucket: SymbolBucket, shapedIcon: PositionedIcon | undef
     const iconTextFitPadding = layout.get('icon-text-fit-padding').evaluate(feature, {}, canonical);
     const hasIconTextFit = iconTextFit !== 'none';
     let defaultShapedIcon = shapedIcon;
-    let verticallyShapedIcon;
+    let verticallyShapedIcon: PositionedIcon | undefined;
     if (shapedIcon && hasIconTextFit) {
         if (bucket.allowVerticalPlacement && shapedTextOrientations.vertical) {
             verticallyShapedIcon = fitIconToText(shapedIcon, shapedTextOrientations.vertical, iconTextFit,
@@ -967,7 +967,6 @@ function fitIconsToText(bucket: SymbolBucket, shapedIcon: PositionedIcon | undef
                                        iconTextFitPadding, iconOffset, fontScale);
         }
     }
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     return {defaultShapedIcon, verticallyShapedIcon};
 }
 
@@ -1365,8 +1364,13 @@ function addSymbol(bucket: SymbolBucket,
                     textCollisionBounds?: SymbolBoundingBox | null,
                     textVerticalCollisionBounds?: SymbolBoundingBox | null) {
     const lineArray = bucket.addToLineVertexArray(anchor, line);
-    let textBoxIndex, iconBoxIndex, verticalTextBoxIndex, verticalIconBoxIndex;
-    let textCircle, verticalTextCircle, verticalIconCircle;
+    let textBoxIndex: number | undefined;
+    let iconBoxIndex: number | undefined;
+    let verticalTextBoxIndex: number | undefined;
+    let verticalIconBoxIndex: number | undefined;
+    let textCircle: number | null | undefined;
+    let verticalTextCircle: number | null | undefined;
+    let verticalIconCircle: number | null | undefined;
 
     let numIconVertices = 0;
     let numVerticalIconVertices = 0;
@@ -1528,11 +1532,8 @@ function addSymbol(bucket: SymbolBucket,
         return diameter ? Math.max(diameter, prevHeight) : prevHeight;
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     collisionCircleDiameter = getCollisionCircleHeight(textCircle, collisionCircleDiameter);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     collisionCircleDiameter = getCollisionCircleHeight(verticalTextCircle, collisionCircleDiameter);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     collisionCircleDiameter = getCollisionCircleHeight(verticalIconCircle, collisionCircleDiameter);
     const useRuntimeCollisionCircles = (collisionCircleDiameter > -1) ? 1 : 0;
 
@@ -1559,21 +1560,13 @@ function addSymbol(bucket: SymbolBucket,
         placedIconSymbolIndex,
         verticalPlacedIconSymbolIndex,
         key,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         textBoxIndex !== undefined ? textBoxIndex : bucket.collisionBoxArray.length,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         textBoxIndex !== undefined ? textBoxIndex + 1 : bucket.collisionBoxArray.length,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         verticalTextBoxIndex !== undefined ? verticalTextBoxIndex : bucket.collisionBoxArray.length,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         verticalTextBoxIndex !== undefined ? verticalTextBoxIndex + 1 : bucket.collisionBoxArray.length,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         iconBoxIndex !== undefined ? iconBoxIndex : bucket.collisionBoxArray.length,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         iconBoxIndex !== undefined ? iconBoxIndex + 1 : bucket.collisionBoxArray.length,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         verticalIconBoxIndex ? verticalIconBoxIndex : bucket.collisionBoxArray.length,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         verticalIconBoxIndex ? verticalIconBoxIndex + 1 : bucket.collisionBoxArray.length,
         featureIndex,
         numHorizontalGlyphVertices,

@@ -1485,7 +1485,7 @@ export class Map extends Camera {
 
         const tr = this.transform;
         const projection = tr.projection.name;
-        let projectionHasChanged;
+        let projectionHasChanged: boolean | undefined;
 
         if (projection === 'globe' && tr.zoom >= GLOBE_ZOOM_THRESHOLD_MAX) {
             tr.setMercatorFromTransition();
@@ -1516,7 +1516,7 @@ export class Map extends Camera {
     }
 
     _updateProjection(projection: ProjectionSpecification): this {
-        let projectionHasChanged;
+        let projectionHasChanged: boolean | undefined;
         const oldMercatorFromTransition = this.transform.mercatorFromTransition;
 
         if (projection.name === 'globe' && this.transform.zoom >= GLOBE_ZOOM_THRESHOLD_MAX) {
@@ -4210,17 +4210,17 @@ export class Map extends Camera {
         const width = this._container.getBoundingClientRect().width || 400;
         const height = this._container.getBoundingClientRect().height || 300;
 
-        let transformValues;
-        let transformScaleWidth;
-        let transformScaleHeight;
+        let transformValues: string[] | undefined;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let transformScaleWidth: any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let transformScaleHeight: any;
         let el: Element | null | undefined = this._container;
         while (el && (!transformScaleWidth || !transformScaleHeight)) {
             const transformMatrix = window.getComputedStyle(el).transform;
             if (transformMatrix && transformMatrix !== 'none') {
                 transformValues = transformMatrix.match(CSS_MATRIX_RE)[1].split(', ');
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
                 if (transformValues[0] && transformValues[0] !== '0' && transformValues[0] !== '1') transformScaleWidth = transformValues[0];
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
                 if (transformValues[3] && transformValues[3] !== '0' && transformValues[3] !== '1') transformScaleHeight = transformValues[3];
             }
             el = el.parentElement;

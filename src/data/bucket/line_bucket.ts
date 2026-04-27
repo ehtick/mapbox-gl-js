@@ -362,14 +362,14 @@ class LineBucket implements Bucket {
 
             if (dashPropertyValue.kind === 'constant' && capPropertyValue.kind === 'constant') continue;
 
-            let dashArray, cap;
+            let dashArray: Array<number>;
+            let cap: string;
 
             if (dashPropertyValue.kind === 'constant') {
                 dashArray = dashPropertyValue.value;
                 if (!dashArray) continue;
 
             } else {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 dashArray = dashPropertyValue.evaluate({zoom}, feature);
             }
 
@@ -377,15 +377,12 @@ class LineBucket implements Bucket {
                 cap = capPropertyValue.value;
 
             } else {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 cap = capPropertyValue.evaluate({zoom}, feature);
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             lineAtlas.addDash(dashArray, cap);
 
             // save positions for paint array
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             feature.patterns[layer.id] = [lineAtlas.getKey(dashArray, cap)];
         }
 

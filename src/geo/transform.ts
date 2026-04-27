@@ -1745,7 +1745,8 @@ class Transform {
     get pixelsPerMeterRatio(): number { return this.pixelsPerMeter / mercatorZfromAltitude(1, this.center.lat) / this.worldSize; }
 
     setLocationAtPoint(lnglat: LngLat, point: Point) {
-        let x, y;
+        let x: number;
+        let y: number;
         const centerPoint = this.centerPoint;
 
         if (this.projection.name === 'globe') {

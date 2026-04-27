@@ -60,9 +60,10 @@ export function createFunction(parameters, propertySpec) {
         throw new Error(`Unknown color space: ${parameters.colorSpace}`);
     }
 
-    let innerFun;
-    let hashedStops;
-    let categoricalKeyType;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let innerFun: ((parameters: any, propertySpec: any, input: any, hashedStops?: any, categoricalKeyType?: any) => any) | undefined;
+    let hashedStops: Record<string | number, unknown> | undefined;
+    let categoricalKeyType: string | undefined;
     if (type === 'exponential') {
         innerFun = evaluateExponentialFunction;
     } else if (type === 'interval') {
@@ -75,7 +76,7 @@ export function createFunction(parameters, propertySpec) {
         hashedStops = Object.create(null);
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         for (const stop of parameters.stops) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             hashedStops[stop[0]] = stop[1];
         }
 
@@ -154,7 +155,7 @@ export function createFunction(parameters, propertySpec) {
             interpolationFactor: Interpolate.interpolationFactor.bind(undefined, interpolationType),
             // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
             zoomStops: parameters.stops.map(s => s[0]),
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
             evaluate: ({zoom}) => innerFun(parameters, propertySpec, zoom, hashedStops, categoricalKeyType)
         };
     } else {
@@ -167,7 +168,7 @@ export function createFunction(parameters, propertySpec) {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
                     return coalesce(parameters.default, propertySpec.default);
                 }
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-return
                 return innerFun(parameters, propertySpec, value, hashedStops, categoricalKeyType);
             }
         };

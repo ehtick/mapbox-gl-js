@@ -33,10 +33,12 @@ import type VertexBuffer from '../gl/vertex_buffer';
 import type {ElevationType} from '../../3d-style/elevation/elevation_constants';
 import type Transform from '../geo/transform';
 import type Program from './program';
+import type {DrawMode} from './program';
 import type {DepthPrePass} from './painter';
 import type MercatorCoordinate from '../geo/mercator_coordinate';
 import type {UniformValues} from './uniform_binding';
 import type SegmentVector from '../data/segment';
+import type IndexBuffer from '../gl/index_buffer';
 import type ProgramConfiguration from '../data/program_configuration';
 import type {
     FillUniformsType,
@@ -375,7 +377,9 @@ function drawFillTiles(params: DrawFillParams, elevatedGeometry: boolean, multip
         let programName: 'fillPattern' | 'fill' | 'fillOutlinePattern' | 'fillOutline';
         let uniformValues: UniformValues<FillUniformsType | FillPatternUniformsType>;
 
-        let drawMode, indexBuffer, segments;
+        let drawMode: DrawMode;
+        let indexBuffer: IndexBuffer;
+        let segments: SegmentVector;
         if (!isOutline) {
             programName = image ? 'fillPattern' : 'fill';
             drawMode = gl.TRIANGLES;
@@ -473,10 +477,8 @@ function drawFillTiles(params: DrawFillParams, elevatedGeometry: boolean, multip
                 activeDepthMode = depthModeFor3D;
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             program.draw(painter, drawMode, activeDepthMode,
                 stencilModeOverride ? stencilModeOverride : painter.stencilModeForClipping(coord), colorMode, CullFaceMode.disabled, uniformValues,
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 layer.id, bufferData.layoutVertexBuffer, indexBuffer, segments,
                 layer.paint, painter.transform.zoom, programConfiguration, dynamicBuffers);
         }

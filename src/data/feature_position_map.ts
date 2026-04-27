@@ -72,7 +72,7 @@ export default class FeaturePositionMap {
         // so TypedArray vs Array distinction that TS points out doesn't matter
         map.ids = obj.ids as unknown as number[];
         map.positions = obj.positions as unknown as number[];
-        let prev;
+        let prev: number | undefined;
         for (const id of map.ids) {
             if (id !== prev) map.uniqueIds.push(id);
             prev = id;

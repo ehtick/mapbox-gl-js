@@ -193,19 +193,15 @@ function updateSource(sourceId: string, after: Sources, commands: Array<Command>
 }
 
 function canUpdateGeoJSON(before: Sources, after: Sources, sourceId: string) {
-    let prop;
+    let prop: string;
     for (prop in before[sourceId]) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (!Object.hasOwn(before[sourceId], prop)) continue;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         if (prop !== 'data' && !isEqual(before[sourceId][prop], after[sourceId][prop])) {
             return false;
         }
     }
     for (prop in after[sourceId]) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (!Object.hasOwn(after[sourceId], prop)) continue;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         if (prop !== 'data' && !isEqual(before[sourceId][prop], after[sourceId][prop])) {
             return false;
         }
@@ -217,37 +213,27 @@ function diffSources(before: Sources, after: Sources, commands: Array<Command>, 
     before = before || {};
     after = after || {};
 
-    let sourceId;
+    let sourceId: string;
 
     // look for sources to remove
     for (sourceId in before) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (!Object.hasOwn(before, sourceId)) continue;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (!Object.hasOwn(after, sourceId)) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             removeSource(sourceId, commands, sourcesRemoved);
         }
     }
 
     // look for sources to add/update
     for (sourceId in after) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (!Object.hasOwn(after, sourceId)) continue;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         const source = after[sourceId];
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (!Object.hasOwn(before, sourceId)) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             addSource(sourceId, after, commands);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         } else if (!isEqual(before[sourceId], source)) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
             if (before[sourceId].type === 'geojson' && source.type === 'geojson' && canUpdateGeoJSON(before, after, sourceId)) {
                 commands.push({command: operations.setGeoJSONSourceData, args: [sourceId, source.data]});
             } else {
                 // no update command, must remove then add
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 updateSource(sourceId, after, commands, sourcesRemoved);
             }
         }
@@ -267,23 +253,17 @@ function diffLayerPropertyChanges(
     before = before || {};
     after = after || {};
 
-    let prop;
+    let prop: string;
 
     for (prop in before) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (!Object.hasOwn(before, prop)) continue;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         if (!isEqual(before[prop], after[prop])) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             commands.push({command, args: [layerId, prop, after[prop], klass]});
         }
     }
     for (prop in after) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (!Object.hasOwn(after, prop) || Object.hasOwn(before, prop)) continue;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         if (!isEqual(before[prop], after[prop])) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             commands.push({command, args: [layerId, prop, after[prop], klass]});
         }
     }
@@ -317,16 +297,19 @@ function diffLayers(before: Array<LayerSpecification>, after: Array<LayerSpecifi
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const clean = Object.create(null);
 
-    let i, d, layerId, beforeLayer: LayerSpecification, afterLayer: LayerSpecification, insertBeforeLayerId, prop;
+    let i: number;
+    let d: number;
+    let layerId: string;
+    let beforeLayer: LayerSpecification;
+    let afterLayer: LayerSpecification;
+    let insertBeforeLayerId: string;
+    let prop: string;
 
     // remove layers
     for (i = 0, d = 0; i < beforeOrder.length; i++) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         layerId = beforeOrder[i];
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (!Object.hasOwn(afterIndex, layerId)) {
             commands.push({command: operations.removeLayer, args: [layerId]});
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             tracker.splice(tracker.indexOf(layerId, d), 1);
         } else {
             // limit where in tracker we need to look for a match
@@ -341,11 +324,9 @@ function diffLayers(before: Array<LayerSpecification>, after: Array<LayerSpecifi
 
         if (tracker[tracker.length - 1 - i] === layerId) continue;
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (Object.hasOwn(beforeIndex, layerId)) {
             // remove the layer before we insert at the correct position
             commands.push({command: operations.removeLayer, args: [layerId]});
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             tracker.splice(tracker.lastIndexOf(layerId, tracker.length - d), 1);
         } else {
             // limit where in tracker we need to look for a match
@@ -354,9 +335,7 @@ function diffLayers(before: Array<LayerSpecification>, after: Array<LayerSpecifi
 
         // add layer at correct position
         insertBeforeLayerId = tracker[tracker.length - i];
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         commands.push({command: operations.addLayer, args: [afterIndex[layerId], insertBeforeLayerId]});
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         tracker.splice(tracker.length - i, 0, layerId);
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         clean[layerId] = true;
@@ -364,11 +343,10 @@ function diffLayers(before: Array<LayerSpecification>, after: Array<LayerSpecifi
 
     // update layers
     for (i = 0; i < afterOrder.length; i++) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         layerId = afterOrder[i];
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         beforeLayer = beforeIndex[layerId];
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         afterLayer = afterIndex[layerId];
 
         // no need to update if previously added (new or moved)
@@ -381,16 +359,13 @@ function diffLayers(before: Array<LayerSpecification>, after: Array<LayerSpecifi
             commands.push({command: operations.removeLayer, args: [layerId]});
             // we add the layer back at the same position it was already in, so
             // there's no need to update the `tracker`
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             insertBeforeLayerId = tracker[tracker.lastIndexOf(layerId) + 1];
             commands.push({command: operations.addLayer, args: [afterLayer, insertBeforeLayerId]});
             continue;
         }
 
         // layout, paint, filter, minzoom, maxzoom
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         diffLayerPropertyChanges(beforeLayer.layout, afterLayer.layout, commands, layerId, null, operations.setLayoutProperty);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         diffLayerPropertyChanges(beforeLayer.paint, afterLayer.paint, commands, layerId, null, operations.setPaintProperty);
         if (!isEqual(beforeLayer.slot, afterLayer.slot)) {
             commands.push({command: operations.setSlot, args: [layerId, afterLayer.slot]});
@@ -404,32 +379,24 @@ function diffLayers(before: Array<LayerSpecification>, after: Array<LayerSpecifi
 
         // handle all other layer props, including paint.*
         for (prop in beforeLayer) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             if (!Object.hasOwn(beforeLayer, prop)) continue;
             if (prop === 'layout' || prop === 'paint' || prop === 'filter' ||
                 prop === 'metadata' || prop === 'minzoom' || prop === 'maxzoom' || prop === 'slot') continue;
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
             if (prop.indexOf('paint.') === 0) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 diffLayerPropertyChanges(beforeLayer[prop], afterLayer[prop], commands, layerId, prop.slice(6), operations.setPaintProperty);
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             } else if (!isEqual(beforeLayer[prop], afterLayer[prop])) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                 commands.push({command: operations.setLayerProperty, args: [layerId, prop, afterLayer[prop]]});
             }
         }
         for (prop in afterLayer) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             if (!Object.hasOwn(afterLayer, prop) || Object.hasOwn(beforeLayer, prop)) continue;
             if (prop === 'layout' || prop === 'paint' || prop === 'filter' ||
                 prop === 'metadata' || prop === 'minzoom' || prop === 'maxzoom' || prop === 'slot') continue;
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
             if (prop.indexOf('paint.') === 0) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 diffLayerPropertyChanges(beforeLayer[prop], afterLayer[prop], commands, layerId, prop.slice(6), operations.setPaintProperty);
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             } else if (!isEqual(beforeLayer[prop], afterLayer[prop])) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                 commands.push({command: operations.setLayerProperty, args: [layerId, prop, afterLayer[prop]]});
             }
         }
@@ -451,16 +418,16 @@ export function diffImports(before: Array<ImportSpecification> | null | undefine
     // track order of imports as if they have been mutated
     const tracker = beforeOrder.slice();
 
-    let i, d, importId, insertBefore;
+    let i: number;
+    let d: number;
+    let importId: string;
+    let insertBefore: string;
 
     // remove imports
     for (i = 0, d = 0; i < beforeOrder.length; i++) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         importId = beforeOrder[i];
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (!Object.hasOwn(afterIndex, importId)) {
             commands.push({command: operations.removeImport, args: [importId]});
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             tracker.splice(tracker.indexOf(importId, d), 1);
         } else {
             // limit where in tracker we need to look for a match
@@ -475,11 +442,9 @@ export function diffImports(before: Array<ImportSpecification> | null | undefine
 
         if (tracker[tracker.length - 1 - i] === importId) continue;
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (Object.hasOwn(beforeIndex, importId)) {
             // remove the import before we insert at the correct position
             commands.push({command: operations.removeImport, args: [importId]});
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             tracker.splice(tracker.lastIndexOf(importId, tracker.length - d), 1);
         } else {
             // limit where in tracker we need to look for a match
@@ -488,9 +453,7 @@ export function diffImports(before: Array<ImportSpecification> | null | undefine
 
         // add import at correct position
         insertBefore = tracker[tracker.length - i];
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         commands.push({command: operations.addImport, args: [afterIndex[importId], insertBefore]});
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         tracker.splice(tracker.length - i, 0, importId);
     }
 
@@ -511,13 +474,11 @@ function diffIconsets(before: IconsetsSpecification, after: IconsetsSpecificatio
     before = before || {};
     after = after || {};
 
-    let iconsetId;
+    let iconsetId: string;
 
     // look for iconsets to remove
     for (iconsetId in before) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (!Object.hasOwn(before, iconsetId)) continue;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (!Object.hasOwn(after, iconsetId)) {
             commands.push({command: operations.removeIconset, args: [iconsetId]});
         }
@@ -525,14 +486,10 @@ function diffIconsets(before: IconsetsSpecification, after: IconsetsSpecificatio
 
     // look for iconsets to add/update
     for (iconsetId in after) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (!Object.hasOwn(after, iconsetId)) continue;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         const iconset = after[iconsetId];
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         if (!Object.hasOwn(before, iconsetId)) {
             commands.push({command: operations.addIconset, args: [iconsetId, iconset]});
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         } else if (!isEqual(before[iconsetId], iconset)) {
             commands.push({command: operations.removeIconset, args: [iconsetId]});
             commands.push({command: operations.addIconset, args: [iconsetId, iconset]});

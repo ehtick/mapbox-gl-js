@@ -68,7 +68,7 @@ export function farthestPixelDistanceOnSphere(tr: Transform, pixelsPerMeter: num
     const pointOnGlobe = [];
     const ray = new Ray(cameraPosition, dir);
 
-    let pixelDistance;
+    let pixelDistance: number;
     if (ray.closestPointOnSphere(globeCenter, globeRadius, pointOnGlobe)) {
         const p0 = vec3.add([], pointOnGlobe, globeCenter);
         const p1 = vec3.sub([], p0, cameraPosition);

@@ -452,7 +452,8 @@ function renderTextureToMap(painter: Painter, sourceCache: SourceCache, layer: R
 
         context.activeTexture.set(gl.TEXTURE1);
 
-        let parentScaleBy, parentTL;
+        let parentScaleBy: number | undefined;
+        let parentTL: [number, number] | undefined;
         if (parentTile && parentTile.rasterParticleState) {
             parentTile.rasterParticleState.targetColorTexture.bind(gl.LINEAR, gl.CLAMP_TO_EDGE);
             parentScaleBy = Math.pow(2, parentTile.tileID.overscaledZ - tile.tileID.overscaledZ);
@@ -494,12 +495,10 @@ function renderTextureToMap(painter: Painter, sourceCache: SourceCache, layer: R
             globeMatrix,
             globeMercatorMatrix,
             gridMatrix,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             parentTL || [0, 0],
             globeToMercatorTransition(painter.transform.zoom),
             mercatorCenter,
             cutoffParams,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             parentScaleBy || 1,
             fade,
             rasterElevation

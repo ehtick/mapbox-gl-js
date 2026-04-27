@@ -40,10 +40,10 @@ export default function validateFunction(options: FunctionValidatorOptions): Val
 
     const functionValueSpec = options.valueSpec;
     const functionType = unbundle(value.type);
-    let stopKeyType;
+    let stopKeyType: string | undefined;
     let stopDomainValues: Partial<Record<string | number, boolean>> = {};
     let previousStopDomainValue: unknown;
-    let previousStopDomainZoom;
+    let previousStopDomainZoom: number | undefined;
 
     const isZoomFunction = functionType !== 'categorical' && value.property === undefined;
     const isPropertyFunction = !isZoomFunction;

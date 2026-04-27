@@ -57,7 +57,7 @@ export default function validateLayer(options: LayerValidatorOptions): Validatio
             }
         });
 
-        let parent;
+        let parent: LayerSpecification | undefined;
 
         style.layers.forEach((layer) => {
             if (unbundle(layer.id) === ref) parent = layer;
@@ -66,11 +66,9 @@ export default function validateLayer(options: LayerValidatorOptions): Validatio
         if (!parent) {
             if (typeof ref === 'string')
                 errors.push(new ValidationError(key, layer.ref, `ref layer "${ref}" not found`));
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        } else if (parent.ref) {
+        } else if ((parent as LayerSpecification & {ref?: unknown}).ref) {
             errors.push(new ValidationError(key, layer.ref, 'ref cannot reference another ref layer'));
         } else {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             type = unbundle(parent.type) as string;
         }
     } else if (!(type === 'background' || type === 'sky' || type === 'slot')) {

@@ -47,7 +47,10 @@ export class ImageVariant implements RasterizationOptions {
     }
 
     static parse(str: StringifiedImageVariant): ImageVariant | null {
-        let id, params, sx, sy;
+        let id: ImageIdSpec | undefined;
+        let params: Record<string, Color> | undefined;
+        let sx: number | undefined;
+        let sy: number | undefined;
 
         try {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -58,8 +61,7 @@ export class ImageVariant implements RasterizationOptions {
 
         if (!id) return null;
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        return new ImageVariant(id as ImageIdSpec, {params, sx, sy});
+        return new ImageVariant(id, {params, sx, sy});
     }
 
     scaleSelf(factor: number, yFactor: number = factor): this {

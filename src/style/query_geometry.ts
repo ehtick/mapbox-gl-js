@@ -65,8 +65,8 @@ export class QueryGeometry {
      * @returns {QueryGeometry} An instance of the QueryGeometry class.
      */
     static createFromScreenPoints(geometry: PointLike | [PointLike, PointLike], transform: Transform): QueryGeometry {
-        let screenGeometry;
-        let aboveHorizon;
+        let screenGeometry: Point[];
+        let aboveHorizon: boolean;
 
         if (geometry instanceof Point || typeof geometry[0] === 'number') {
             const pt = Point.convert(geometry as PointLike);
@@ -80,7 +80,6 @@ export class QueryGeometry {
             aboveHorizon = polygonizeBounds(tl, br).every((p) => transform.isPointAboveHorizon(p)) && transform.isPointAboveHorizon(center);
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         return new QueryGeometry(screenGeometry, aboveHorizon, transform);
     }
 
@@ -459,7 +458,7 @@ export function projectPolygonCoveringPoles(polygon: Point[], tr: Transform): Ca
     const b = partB.length === 0 ? partA[0] : partB[0];
     const intersectionY = interpolate(a.y, b.y, t);
 
-    let mid;
+    let mid: Point[];
 
     if (containsNp) {
         mid = [
@@ -477,7 +476,6 @@ export function projectPolygonCoveringPoles(polygon: Point[], tr: Transform): Ca
         ];
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     resampled.push(...mid);
 
     // Resample to the second section of the ring

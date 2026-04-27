@@ -417,7 +417,7 @@ export default class Popup extends Evented<PopupEvents> {
     setHTML(html: string): this {
         const frag = document.createDocumentFragment();
         const temp = document.createElement('body');
-        let child;
+        let child: ChildNode | null;
         temp.innerHTML = html;
         while (true) {
             child = temp.firstChild;

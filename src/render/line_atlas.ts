@@ -103,7 +103,7 @@ class LineAtlas {
                 const distLeft = Math.abs(x - range.left);
                 const distRight = Math.abs(x - range.right);
                 const minDist = Math.min(distLeft, distRight);
-                let signedDistance;
+                let signedDistance: number;
 
                 const distMiddle =  y / n * (halfStretch + 1);
                 if (range.isDash) {
@@ -113,7 +113,6 @@ class LineAtlas {
                     signedDistance = halfStretch - Math.sqrt(minDist * minDist + distMiddle * distMiddle);
                 }
 
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 this.image.data[index + x] = Math.max(0, Math.min(255, signedDistance + 128));
             }
         }

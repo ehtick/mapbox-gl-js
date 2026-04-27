@@ -45,7 +45,7 @@ export default function validateObject(options: ObjectValidatorOptions): Validat
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const elementSpec = elementSpecs[elementSpecKey] || elementSpecs['*'];
 
-        let validateElement;
+        let validateElement: ((options: ObjectElementValidatorOptions, object?: unknown) => ValidationError[]) | undefined;
         if (elementValidators[elementSpecKey]) {
             validateElement = elementValidators[elementSpecKey];
         } else if (elementSpecs[elementSpecKey]) {
@@ -61,11 +61,9 @@ export default function validateObject(options: ObjectValidatorOptions): Validat
             continue;
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call
         errors = errors.concat(validateElement({
             key: (key ? `${key}.` : key) + objectKey,
             value: object[objectKey],
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             valueSpec: elementSpec,
             style,
             styleSpec,

@@ -95,7 +95,8 @@ class IndoorControl implements IControl {
                 const selectedIndex = model.floors.findIndex(f => f.id === model.selectedFloorId);
                 if (selectedIndex !== -1) {
                     const totalFloors = model.floors.length;
-                    let minVisible, maxVisible;
+                    let minVisible: number;
+                    let maxVisible: number;
 
                     if (totalFloors <= VISIBLE_FLOORS + 2) {
                         minVisible = 0;

@@ -609,7 +609,7 @@ function drawLayerSymbols(
 
             let texSizeIcon: [number, number] = [0, 0];
             let atlasTextureIcon: Texture | null = null;
-            let atlasInterpolationIcon;
+            let atlasInterpolationIcon: WebGL2RenderingContext['NEAREST'] | WebGL2RenderingContext['LINEAR'] | undefined;
 
             const sizeData = bucket.textSizeData;
 
@@ -681,7 +681,6 @@ function drawLayerSymbols(
                 atlasTexture,
                 atlasTextureIcon,
                 atlasInterpolation,
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 atlasInterpolationIcon,
                 isSDF: true,
                 hasHalo,

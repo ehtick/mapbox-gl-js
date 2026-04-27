@@ -556,7 +556,7 @@ class ModelBucket implements Bucket {
         const color = Object.assign({}, layer.paint.get('model-color').evaluate(evaluationFeature, featureState, canonical));
         color.a = layer.paint.get('model-color-mix-intensity').evaluate(evaluationFeature, featureState, canonical);
 
-        const rotationScaleYZFlip = [];
+        const rotationScaleYZFlip: mat4 = [];
         if (this.maxVerticalOffset < translation[2]) this.maxVerticalOffset = translation[2];
 
         // Track per model and per bucket maximum scaling as well as per instance translation
@@ -605,23 +605,14 @@ class ModelBucket implements Bucket {
             const roadElevationContribution = perModelVertexArray.instancesRoadElevation ? perModelVertexArray.instancesRoadElevation[instanceOffset] : 0;
             va[offset + 6] = translation[2] + roadElevationContribution + terrainElevationContribution;
             // Elements [7..16] Instance modelMatrix holds combined rotation and scale 3x3,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             va[offset + 7]  = rotationScaleYZFlip[0];
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             va[offset + 8]  = rotationScaleYZFlip[1];
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             va[offset + 9]  = rotationScaleYZFlip[2];
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             va[offset + 10] = rotationScaleYZFlip[4];
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             va[offset + 11] = rotationScaleYZFlip[5];
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             va[offset + 12] = rotationScaleYZFlip[6];
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             va[offset + 13] = rotationScaleYZFlip[8];
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             va[offset + 14] = rotationScaleYZFlip[9];
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             va[offset + 15] = rotationScaleYZFlip[10];
             perModelVertexArray.instancesEvaluatedElevation[instanceOffset] = translation[2];
         }

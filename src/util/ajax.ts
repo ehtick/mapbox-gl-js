@@ -317,7 +317,8 @@ function arrayBufferToImageBitmap(data: ArrayBuffer, callback: Callback<ImageBit
     });
 }
 
-let imageQueue, numImageRequests;
+let imageQueue: Array<{requestParameters: RequestParameters; callback: ResponseCallback<ImageBitmap>; cancelled: boolean; cancel: () => void}>;
+let numImageRequests: number;
 export const resetImageRequestQueue = () => {
     imageQueue = [];
     numImageRequests = 0;
@@ -343,7 +344,6 @@ export const getImage = function (
             cancelled: false,
             cancel() { this.cancelled = true; }
         };
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         imageQueue.push(queued);
         return queued;
     }
@@ -355,14 +355,10 @@ export const getImage = function (
         advanced = true;
         numImageRequests--;
         assert(numImageRequests >= 0);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         while (imageQueue.length && numImageRequests < config.MAX_PARALLEL_IMAGE_REQUESTS) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
             const request = imageQueue.shift();
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             const {requestParameters, callback, cancelled} = request;
             if (!cancelled) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
                 request.cancel = getImage(requestParameters, callback).cancel;
             }
         }

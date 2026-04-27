@@ -38,11 +38,11 @@ class Assertion implements Expression {
             return context.error(`Expected at least one argument.`);
 
         let i = 1;
-        let type;
+        let type: Type;
 
         const name = args[0] as string;
         if (name === 'array') {
-            let itemType;
+            let itemType: Type;
             if (args.length > 2) {
                 const type = args[1];
                 if (typeof type !== 'string' || !(type in types) || type === 'object')
@@ -67,7 +67,6 @@ class Assertion implements Expression {
                 i++;
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             type = array(itemType, N);
         } else {
             assert(types[name], name);

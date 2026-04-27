@@ -1031,7 +1031,7 @@ class SourceCache extends Evented {
 
             // An array of wrap values for the tile [-1, 0, 1]. The default value is 0 but -1 or 1 wrapping
             // might be required in globe view due to globe's surface being continuous.
-            let tilesToCheck;
+            let tilesToCheck: number[];
 
             if (isGlobe) {
                 // Compare distances to copies of the tile to see if a wrapped one should be used.
@@ -1060,7 +1060,6 @@ class SourceCache extends Evented {
             }
 
             for (const wrap of tilesToCheck) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 const tileResult = queryGeometry.containsTile(tile, transform, use3DQuery, wrap);
                 if (tileResult) {
                     tileResults.push(tileResult);

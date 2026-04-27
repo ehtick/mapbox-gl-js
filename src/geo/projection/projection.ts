@@ -124,7 +124,9 @@ export default class Projection {
     }
 
     createTileMatrix(tr: Transform, worldSize: number, id: UnwrappedTileID): mat4 {
-        let scale, scaledX, scaledY;
+        let scale: number;
+        let scaledX: number;
+        let scaledY: number;
         const canonical = id.canonical;
         const posMatrix = mat4.identity(new Float64Array(16));
 

@@ -936,7 +936,7 @@ export class Terrain extends Elevation {
                 fbo.dirty = false;
             }
 
-            let currentStencilSource; // There is no need to setup stencil for the same source for consecutive layers.
+            let currentStencilSource: string | null | undefined; // There is no need to setup stencil for the same source for consecutive layers.
             for (let j = drapedLayerBatch.start; j <= drapedLayerBatch.end; ++j) {
                 const layer = painter.style._mergedLayers[layerIds[j]];
                 const hidden = layer.isHidden(painter.transform.zoom);
@@ -1434,7 +1434,7 @@ export class Terrain extends Elevation {
         // more need: in such case, if there is no overlap, stencilling is disabled.
         if (proxiedCoords.length <= 1) { this._overlapStencilType = false; return; }
 
-        let stencilRange;
+        let stencilRange: number;
         if (layer.isTileClipped()) {
             stencilRange = proxiedCoords.length;
             this._overlapStencilMode.test = {func: gl.EQUAL, mask: 0xFF};

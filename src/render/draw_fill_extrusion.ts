@@ -377,7 +377,7 @@ function drawExtrusionTiles(painter: Painter, source: SourceCache, layer: FillEx
         baseDefines.push('RENDER_WALL_MODE');
     }
 
-    let singleCascadeDefines;
+    let singleCascadeDefines: DynamicDefinesType[] | undefined;
 
     const isShadowPass = painter.renderPass === 'shadow';
     const shadowRenderer = painter.shadowRenderer;
@@ -437,7 +437,6 @@ function drawExtrusionTiles(painter: Painter, source: SourceCache, layer: FillEx
         }
 
         const program = painter.getOrCreateProgram(programName,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             {config: programConfiguration, defines: singleCascade ? singleCascadeDefines : baseDefines, overrideFog: affectedByFog});
 
         if (painter.terrain) {
@@ -662,7 +661,8 @@ export function drawGroundEffect<StyleLayerType extends TypedStyleLayer>(props: 
                 const nGroundEffect = nBucket.groundEffect;
                 assert(nGroundEffect.regionSegments);
 
-                let translation, regionId;
+                let translation: [number, number, number];
+                let regionId: number;
                 if (i === 0) { // left
                     translation = [-EXTENT, 0, 0];
                     regionId = 1;
@@ -677,12 +677,10 @@ export function drawGroundEffect<StyleLayerType extends TypedStyleLayer>(props: 
                     regionId = 2;
                 }
 
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                 const segments = nGroundEffect.regionSegments[regionId];
                 // No geometry from the neighbour tile intersects the current tile.
                 if (!segments) continue;
 
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 mat4.translate(neighborProjScratch, coord.projMatrix, translation);
                 const matrix = painter.translatePosMatrix(
                     neighborProjScratch,

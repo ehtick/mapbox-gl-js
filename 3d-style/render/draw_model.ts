@@ -940,7 +940,7 @@ function drawInstancedNode(painter: Painter, layer: ModelStyleLayer, node: Model
             const dynamicBuffers = [];
             let program: Program<ModelUniformsType | ModelDepthUniformsType>;
             let uniformValues: UniformValues<ModelUniformsType | ModelDepthUniformsType>;
-            let colorMode;
+            let colorMode: ColorMode;
 
             // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             const useInstancing = !isGlobe && (modelInstances.instancedDataArray.length > minimumInstanceCount);
@@ -1006,7 +1006,6 @@ function drawInstancedNode(painter: Painter, layer: ModelStyleLayer, node: Model
             if (useInstancing) {
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                 dynamicBuffers.push(modelInstances.instancedDataBuffer);
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 program.draw(painter, context.gl.TRIANGLES, depthMode, StencilMode.disabled, colorMode, cullFaceMode,
                 uniformValues, layer.id, mesh.vertexBuffer, mesh.indexBuffer, mesh.segments, layer.paint, painter.transform.zoom,
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
@@ -1017,7 +1016,6 @@ function drawInstancedNode(painter: Painter, layer: ModelStyleLayer, node: Model
                 for (let i = 0; i < modelInstances.instancedDataArray.length; ++i) {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                     uniformValues[instanceUniform] = new Float32Array(modelInstances.instancedDataArray.arrayBuffer, i * 64, 16);
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                     program.draw(painter, context.gl.TRIANGLES, depthMode, StencilMode.disabled, colorMode, cullFaceMode,
                     uniformValues, layer.id, mesh.vertexBuffer, mesh.indexBuffer, mesh.segments, layer.paint, painter.transform.zoom,
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
@@ -1094,7 +1092,9 @@ function drawBatchedModels(painter: Painter, source: SourceCache, layer: ModelSt
         // Keyed by ID to deduplicate footprints across tiles
         const footprints = new Map<string, {node: ModelNode, mvp: mat4}>();
 
-        let start, end, step;
+        let start: number;
+        let end: number;
+        let step: number;
         // When front cutoff is enabled the tiles are iterated in back to front order
         if (frontCutoffEnabled) {
             start = coords.length - 1;
@@ -1110,9 +1110,7 @@ function drawBatchedModels(painter: Painter, source: SourceCache, layer: ModelSt
         const cameraPosTileCoord = vec3.create();
         const cameraPointTileCoord = new Point(0.0, 0.0);
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         for (let i = start; i !== end; i += step) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             const coord = coords[i];
             const tile = source.getTile(coord);
             const bucket = tile.getBucket(layer) as Tiled3dModelBucket | null | undefined;
@@ -1332,7 +1330,7 @@ function drawBatchedModels(painter: Painter, source: SourceCache, layer: ModelSt
                     }
 
                     const material = mesh.material;
-                    let occlusionTextureTransform;
+                    let occlusionTextureTransform: [number, number, number, number] | undefined;
                     // Handle Texture transform
                     if (material.occlusionTexture && material.occlusionTexture.offsetScale) {
                         occlusionTextureTransform = material.occlusionTexture.offsetScale;
@@ -1370,7 +1368,6 @@ function drawBatchedModels(painter: Painter, source: SourceCache, layer: ModelSt
                             emissiveStrength,
                             layer,
                             [0, 0, 0],
-                            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                             occlusionTextureTransform
                     );
 

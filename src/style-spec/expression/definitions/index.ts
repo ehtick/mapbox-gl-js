@@ -736,7 +736,7 @@ CompoundExpression.register(expressions, {
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-return
                 return min;
             }
-            let seedVal;
+            let seedVal: number;
             if (typeof seed === 'string') {
                 seedVal = hashString(seed);
             } else if (typeof seed === 'number') {
@@ -744,7 +744,6 @@ CompoundExpression.register(expressions, {
             } else {
                 throw new RuntimeError(`Invalid seed input: ${seed}`);
             }
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             const random = mulberry32(seedVal)();
             // eslint-disable-next-line @typescript-eslint/no-unsafe-return
             return min + random * (max - min);

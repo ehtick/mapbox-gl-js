@@ -321,7 +321,7 @@ class ScrollZoomHandler implements Handler {
         const easing = this._easing;
 
         let finished = false;
-        let zoom;
+        let zoom: number;
         if (this._type === 'wheel' && startZoom && easing) {
             assert(easing && typeof startZoom === 'number');
 

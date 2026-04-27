@@ -364,7 +364,7 @@ function drawTerrainRaster(painter: Painter, terrain: Terrain, sourceCache: Sour
 
                 const morph = vertexMorphing.getMorphValuesForProxy(coord.key);
                 const shaderMode = morph ? SHADER_MORPHING : SHADER_DEFAULT;
-                let elevationOptions;
+                let elevationOptions: {morphing: {srcDemTile: Tile, dstDemTile: Tile, phase: number}} | undefined;
 
                 if (morph) {
                     elevationOptions = {morphing: {srcDemTile: morph.from, dstDemTile: morph.to, phase: easeCubicInOut(morph.phase)}};
@@ -377,7 +377,6 @@ function drawTerrainRaster(painter: Painter, terrain: Terrain, sourceCache: Sour
                     continue;
                 }
 
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 terrain.setupElevationDraw(tile, program, elevationOptions);
 
                 const unwrappedId = coord.toUnwrapped();

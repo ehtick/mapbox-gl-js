@@ -1925,6 +1925,6 @@ function addAssertions(camera: Camera) { //eslint-disable-line
     });
 }
 
-let canary; //eslint-disable-line
+let canary: string; //eslint-disable-line
 
 export default Camera;

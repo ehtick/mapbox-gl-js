@@ -142,7 +142,7 @@ function drawRaster(painter: Painter, sourceCache: SourceCache, layer: RasterSty
             const {texture, mix: rasterColorMix, offset: rasterColorOffset, tileSize, buffer} = textureDescriptor;
 
             let depthMode: DepthMode;
-            let projMatrix;
+            let projMatrix: mat4;
             if (renderingToTexture) {
                 depthMode = DepthMode.disabled;
                 projMatrix = coord.projMatrix;
@@ -240,7 +240,6 @@ function drawRaster(painter: Painter, sourceCache: SourceCache, layer: RasterSty
 
             const uniformValues = rasterUniformValues(
                 painter,
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 projMatrix,
                 normalizeMatrix,
                 globeMatrix,

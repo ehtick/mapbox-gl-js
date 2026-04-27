@@ -723,8 +723,8 @@ function createLightMatrix(
     const farMinusNear = far - near;
     const farPlusNear = far + near;
 
-    let centerDepth;
-    let radius;
+    let centerDepth: number;
+    let radius: number;
     if (k2 > farMinusNear / farPlusNear) {
         centerDepth = far;
         radius = far * k;

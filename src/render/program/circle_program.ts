@@ -1,7 +1,7 @@
 import {Uniform1f, Uniform2f, Uniform3f, UniformMatrix2f, UniformMatrix4f} from '../uniform_binding';
 import {CanonicalTileID} from '../../source/tile_id';
 import browser from '../../util/browser';
-import {mat4} from 'gl-matrix';
+import {mat4, type mat2} from 'gl-matrix';
 import {globeToMercatorTransition, globePixelsToTileUnits} from '../../geo/projection/globe_util';
 import EXTENT from '../../style-spec/data/extent';
 
@@ -53,7 +53,7 @@ const circleUniformValues = (
     const transform = painter.transform;
     const isGlobe = transform.projection.name === 'globe';
 
-    let extrudeScale;
+    let extrudeScale: Float32Array | mat2;
     if (layer.paint.get('circle-pitch-alignment') === 'map') {
         if (isGlobe) {
             const s = globePixelsToTileUnits(transform.zoom, coord.canonical) * transform._pixelsPerMercatorPixel;
@@ -77,7 +77,6 @@ const circleUniformValues = (
             layer.paint.get('circle-translate'),
             layer.paint.get('circle-translate-anchor')) as Float32Array,
         'u_device_pixel_ratio': browser.devicePixelRatio,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         'u_extrude_scale': extrudeScale,
         'u_inv_rot_matrix': identityMatrix as Float32Array,
         'u_merc_center': [0, 0] as [number, number],

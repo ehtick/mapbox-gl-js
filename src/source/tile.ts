@@ -946,7 +946,8 @@ class Tile {
         // reproject tile outline with adaptive resampling
         const boundsLine = loadGeometry(BOUNDS_FEATURE, this.tileID.canonical, this.tileTransform)[0];
 
-        let boundsVertices, boundsIndices;
+        let boundsVertices: TileBoundsArray;
+        let boundsIndices: TriangleIndexArray;
         if (this.isRaster) {
             // for raster tiles, generate an adaptive MARTINI mesh
             const mesh = getTileMesh(this.tileID.canonical, projection);
@@ -959,23 +960,19 @@ class Tile {
             boundsIndices = new TriangleIndexArray();
 
             for (const {x, y} of boundsLine) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                 boundsVertices.emplaceBack(x, y, 0, 0);
             }
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
             const indices = earcut(boundsVertices.int16.subarray(0, boundsVertices.length * 4), undefined, 4);
 
             // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             for (let i = 0; i < indices.length; i += 3) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
                 boundsIndices.emplaceBack(indices[i], indices[i + 1], indices[i + 2]);
             }
         }
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         this._tileBoundsBuffer = context.createVertexBuffer(boundsVertices, boundsAttributes.members);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         this._tileBoundsIndexBuffer = context.createIndexBuffer(boundsIndices);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
         this._tileBoundsSegments = SegmentVector.simpleSegment(0, 0, boundsVertices.length, boundsIndices.length);
     }
 
@@ -988,14 +985,12 @@ class Tile {
         const normalizationMatrix = globeNormalizeECEF(bounds);
 
         const phase = globeToMercatorTransition(transform.zoom);
-        let worldToECEFMatrix;
+        let worldToECEFMatrix: mat4 | undefined;
         if (phase > 0.0) {
             worldToECEFMatrix = mat4.invert(new Float64Array(16), transform.globeMatrix);
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         this._makeGlobeTileDebugBorderBuffer(context, id, transform, normalizationMatrix, worldToECEFMatrix, phase);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         this._makeGlobeTileDebugTextBuffer(context, id, transform, normalizationMatrix, worldToECEFMatrix, phase);
     }
 

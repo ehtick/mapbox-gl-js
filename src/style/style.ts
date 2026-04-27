@@ -761,7 +761,7 @@ class Style extends Evented<MapEvents> {
         const scope = this.scope ? makeFQID(importSpec.id, this.scope) : importSpec.id;
 
         // Merge import config and initial config from the Map constructor
-        let config;
+        let config: ConfigSpecification | undefined;
         const initialConfig = this._initialConfig && this._initialConfig[scope];
         if (importSpec.config || initialConfig) {
             config = Object.assign({}, importSpec.config, initialConfig);
@@ -779,7 +779,6 @@ class Style extends Evented<MapEvents> {
             imageManager: this.imageManager,
             glyphManager: this.glyphManager,
             modelManager: this.modelManager,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             config,
             configOptions: this.options,
             colorThemeOverride: importSpec["color-theme"],
@@ -1007,16 +1006,16 @@ class Style extends Evented<MapEvents> {
     }
 
     mergeAll() {
-        let light;
-        let ambientLight;
-        let directionalLight;
-        let terrain;
-        let fog;
-        let snow;
-        let rain;
-        let projection;
-        let transition;
-        let camera;
+        let light: Light | undefined;
+        let ambientLight: Lights<Ambient> | null | undefined;
+        let directionalLight: Lights<Directional> | null | undefined;
+        let terrain: Terrain | null | undefined;
+        let fog: Fog | null | undefined;
+        let snow: Snow | null | undefined;
+        let rain: Rain | null | undefined;
+        let projection: ProjectionSpecification | undefined;
+        let transition: TransitionSpecification | undefined;
+        let camera: CameraSpecification | undefined;
         const styleColorThemeForScope: {
             [_: string]: StyleColorTheme;
         } = {};
@@ -1046,7 +1045,6 @@ class Style extends Evented<MapEvents> {
             }
 
             terrain = this._prioritizeTerrain(
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 terrain,
                 style.terrain,
                 style.stylesheet.terrain,
@@ -1073,33 +1071,23 @@ class Style extends Evented<MapEvents> {
             styleColorThemeForScope[style.scope] = style._styleColorTheme;
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         this.light = light;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         this.ambientLight = ambientLight;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         this.directionalLight = directionalLight;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         this.fog = fog;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         this.snow = snow;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         this.rain = rain;
         this._styleColorThemeForScope = styleColorThemeForScope;
 
         if (terrain === null) {
             delete this.terrain;
         } else {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             this.terrain = terrain;
         }
 
         // Use perspective camera as a fallback if no camera is specified
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         this.camera = camera || {'camera-projection': 'perspective'};
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         this.projection = projection || {name: 'mercator'};
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         this.transition = Object.assign({}, defaultTransition, transition);
 
         this.mergeSources();
@@ -1152,7 +1140,7 @@ class Style extends Evented<MapEvents> {
     }
 
     mergeTerrain() {
-        let terrain;
+        let terrain: Terrain | null | undefined;
 
         // Reset terrain that might have been set by a previous merge
         if (this.terrain && this.terrain.scope !== this.scope) {
@@ -1161,7 +1149,6 @@ class Style extends Evented<MapEvents> {
 
         this.forEachFragmentStyle((style: Style) => {
             terrain = this._prioritizeTerrain(
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 terrain,
                 style.terrain,
                 style.stylesheet.terrain,
@@ -1171,20 +1158,18 @@ class Style extends Evented<MapEvents> {
         if (terrain === null) {
             delete this.terrain;
         } else {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             this.terrain = terrain;
         }
     }
 
     mergeProjection() {
-        let projection;
+        let projection: ProjectionSpecification | undefined;
 
         this.forEachFragmentStyle((style: Style) => {
             if (style.stylesheet.projection != null)
                 projection = style.stylesheet.projection;
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         this.projection = projection || {name: 'mercator'};
     }
 
@@ -2488,20 +2473,17 @@ class Style extends Evented<MapEvents> {
                     }
                     sourceInfoMap[sourceKey] = selector.featureNamespace;
                 }
-                let properties;
+                let properties: Record<string, StyleExpression> | undefined;
                 if (selector.properties) {
                     for (const name in selector.properties) {
                         const expression = createExpression(selector.properties[name]);
                         if (expression.result === 'success') {
-                            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                             properties = properties || {};
-                            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                             properties[name] = expression.value;
                         }
                     }
                 }
 
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 featuresetSelectors.push({layerId: selector.layer, namespace: selector.featureNamespace, properties, uniqueFeatureID: selector._uniqueFeatureID});
             }
         }
@@ -2592,7 +2574,7 @@ class Style extends Evented<MapEvents> {
         const expressions = fragmentStyle.options.get(fqid);
         if (!expressions) return;
 
-        let defaultExpression;
+        let defaultExpression: StyleExpression['expression'] | undefined;
         const {minValue, maxValue, stepValue, type, values} = schema[key];
         const defaultExpressionParsed = createExpression(schema[key].default);
         if (defaultExpressionParsed.result === 'success') {
@@ -2606,7 +2588,6 @@ class Style extends Evented<MapEvents> {
 
         this.options.set(fqid, Object.assign({}, expressions, {
             value: expression,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             default: defaultExpression,
             minValue, maxValue, stepValue, type, values
         }));
@@ -2669,8 +2650,8 @@ class Style extends Evented<MapEvents> {
         }
 
         for (const id in schema) {
-            let defaultExpression;
-            let configExpression;
+            let defaultExpression: StyleExpression['expression'] | undefined;
+            let configExpression: StyleExpression['expression'] | undefined;
 
             const expression = schema[id].default;
             const expressionParsed = createExpression(expression);
@@ -2690,9 +2671,7 @@ class Style extends Evented<MapEvents> {
             if (defaultExpression) {
                 const fqid = makeFQID(id, this.scope);
                 this.options.set(fqid, {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                     default: defaultExpression,
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                     value: configExpression,
                     minValue, maxValue, stepValue, type, values
                 });
@@ -3453,7 +3432,7 @@ class Style extends Evented<MapEvents> {
     }
 
     queryRenderedFeatures(queryGeometry: PointLike | [PointLike, PointLike], params: QueryRenderedFeaturesParams | undefined, transform: Transform): GeoJSONFeature[] {
-        let filter;
+        let filter: ReturnType<typeof featureFilter> | undefined;
         if (params && !Array.isArray(params) && params.filter) {
             this._validate(validateFilter, 'queryRenderedFeatures.filter', params.filter, null, params);
             filter = featureFilter(params.filter);
@@ -3471,7 +3450,6 @@ class Style extends Evented<MapEvents> {
             const querySourceCache = queries[sourceCache.id] = queries[sourceCache.id] || {sourceCache, layers: {}, has3DLayers: false};
             if (styleLayer.is3D(!!this.terrain)) querySourceCache.has3DLayers = true;
             querySourceCache.layers[styleLayer.fqid] = querySourceCache.layers[styleLayer.fqid] || {styleLayer, targets: []};
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             querySourceCache.layers[styleLayer.fqid].targets.push({filter});
         };
 
@@ -3509,7 +3487,7 @@ class Style extends Evented<MapEvents> {
     }
 
     queryRenderedFeatureset(queryGeometry: PointLike | [PointLike, PointLike], params: QueryRenderedFeaturesetParams | undefined, transform: Transform): TargetFeature[] {
-        let filter;
+        let filter: ReturnType<typeof featureFilter> | undefined;
         if (params && !Array.isArray(params) && params.filter) {
             this._validate(validateFilter, 'queryRenderedFeatures.filter', params.filter, null, params);
             filter = featureFilter(params.filter);
@@ -3519,13 +3497,11 @@ class Style extends Evented<MapEvents> {
         const targets: QrfTarget[] = [];
 
         if (params && params.target) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             targets.push(Object.assign({}, params, {targetId, filter}));
         } else {
             // Query all root-level featuresets
             const featuresetDescriptors = this.getFeaturesetDescriptors();
             for (const featureset of featuresetDescriptors) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 targets.push({targetId, filter, target: featureset});
             }
 
@@ -3533,7 +3509,6 @@ class Style extends Evented<MapEvents> {
             for (const {style} of this.fragments) {
                 const featuresetDescriptors = style.getFeaturesetDescriptors();
                 for (const featureset of featuresetDescriptors) {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                     targets.push({targetId, filter, target: featureset});
                 }
             }

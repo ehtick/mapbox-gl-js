@@ -155,7 +155,7 @@ class FeatureIndex {
         }
 
         const result: QueryResult = {};
-        let previousIndex;
+        let previousIndex: number | undefined;
         for (let k = 0; k < matching.length; k++) {
             const index = matching[k];
 

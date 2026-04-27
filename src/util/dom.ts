@@ -29,7 +29,7 @@ export function createSVG(
 
 const docStyle = typeof document !== 'undefined' ? document.documentElement && document.documentElement.style : null;
 const selectProp = docStyle && docStyle.userSelect !== undefined ? 'userSelect' : 'WebkitUserSelect';
-let userSelect;
+let userSelect: string | undefined;
 
 export function disableDrag() {
     if (docStyle && selectProp) {
@@ -41,7 +41,6 @@ export function disableDrag() {
 
 export function enableDrag() {
     if (docStyle && selectProp) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         docStyle[selectProp] = userSelect;
     }
 }
