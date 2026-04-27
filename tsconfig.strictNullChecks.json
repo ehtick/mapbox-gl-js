@@ -68,6 +68,7 @@
     "./src/util/throttle.ts",
     "./src/util/throttled_invoker.ts",
     "./src/util/worker_class.ts",
-    "./src/style-spec/deref.ts"
+    "./src/style-spec/deref.ts",
+    "./src/style-spec/util/lerp.ts"
   ]
 }

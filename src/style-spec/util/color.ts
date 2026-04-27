@@ -1,5 +1,5 @@
 import {parseCSSColor} from 'csscolorparser';
-import {number as lerp} from './interpolate';
+import {number as lerp} from './lerp';
 
 import type {LUT} from '../types/lut';
 
