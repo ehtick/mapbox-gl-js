@@ -73,7 +73,7 @@ jobs:
         cache: npm
         cache-dependency-path: 'package-lock.json'
     - run: npm ci --no-audit --no-fund
-    - run: npx playwright install chromium --with-deps --shell-only
+    - run: npx playwright install chromium --with-deps --only-shell
     - run: npm run test-unit
 
   report:
