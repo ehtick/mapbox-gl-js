@@ -36,7 +36,7 @@ class Snow extends Evented {
         super();
 
         const snowProperties = getProperties();
-        this._transitionable = new Transitionable(snowProperties, scope, new Map(configOptions));
+        this._transitionable = new Transitionable(snowProperties, scope, configOptions);
         this.set(snowOptions, configOptions);
         this._transitioning = this._transitionable.untransitioned();
         this.properties = new PossiblyEvaluated(snowProperties);
@@ -90,7 +90,7 @@ class Snow extends Evented {
     }
 
     updateConfig(configOptions?: ConfigOptions | null) {
-        this._transitionable.setTransitionOrValue(this._options, new Map(configOptions));
+        this._transitionable.setTransitionOrValue(this._options, configOptions);
     }
 
     updateTransitions(parameters: TransitionParameters) {

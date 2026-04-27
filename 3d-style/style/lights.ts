@@ -23,13 +23,13 @@ class Lights<P extends LightProps> extends Evented {
         this._options = options;
         this.properties = new PossiblyEvaluated(properties);
 
-        this._transitionable = new Transitionable(properties, scope, new Map(configOptions));
+        this._transitionable = new Transitionable(properties, scope, configOptions);
         this._transitionable.setTransitionOrValue(options.properties as PropertyValueSpecifications<P>);
         this._transitioning = this._transitionable.untransitioned();
     }
 
     updateConfig(configOptions?: ConfigOptions | null) {
-        this._transitionable.setTransitionOrValue(this._options.properties as PropertyValueSpecifications<P>, new Map(configOptions));
+        this._transitionable.setTransitionOrValue(this._options.properties as PropertyValueSpecifications<P>, configOptions);
     }
 
     updateTransitions(parameters: TransitionParameters) {

@@ -793,10 +793,19 @@ class Style extends Evented<MapEvents> {
         return style;
     }
 
-    _reloadImports() {
+    _reloadImports(initialLoad: boolean = false) {
         this.mergeAll();
         this._updateMapProjection();
-        this.updateConfigDependencies();
+        // On initial load, skip `updateConfigDependencies()`. Layers are constructed
+        // with a live reference to `this.options` (via `Layout`/`Transitionable`),
+        // and `Light`/`Fog`/`Snow`/`Rain` do the same, so config-bound expressions
+        // already resolve against the up-to-date config map. Calling `_updateLayer`
+        // here would only queue redundant source-cache reloads and dirty markers
+        // for layers that haven't been broadcast to workers yet — the `setLayers`
+        // call below ships the final state in a single round-trip.
+        if (!initialLoad) {
+            this.updateConfigDependencies();
+        }
         this._updateLayers(this._indoorDependentLayers);
         this.map._triggerCameraUpdate(this.camera);
 
@@ -959,7 +968,7 @@ class Style extends Evented<MapEvents> {
             if (json.imports) {
                 this._loadImports(json.imports, validate)
                     .then(() => {
-                        this._reloadImports();
+                        this._reloadImports(true);
                         this.fire(new Event(isRootStyle ? 'style.load' : 'style.import.load'));
                     })
                     .catch((e) => {
@@ -968,7 +977,7 @@ class Style extends Evented<MapEvents> {
                         this.fire(new Event(isRootStyle ? 'style.load' : 'style.import.load'));
                     });
             } else {
-                this._reloadImports();
+                this._reloadImports(true);
                 this.fire(new Event(isRootStyle ? 'style.load' : 'style.import.load'));
             }
         };

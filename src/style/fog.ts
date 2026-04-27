@@ -64,7 +64,12 @@ class Fog extends Evented {
             "vertical-range": new DataConstantProperty(fogReference["vertical-range"]),
         });
 
-        this._transitionable = new Transitionable(fogProperties, scope, new Map(configOptions));
+        // Hold a live reference to the shared `configOptions` Map (matching the
+        // pattern used by `StyleLayer`'s `Layout`/`Transitionable`). Property
+        // expressions read config values via `EvaluationContext.options.get(fqid)`,
+        // so as long as the Map identity is stable, runtime mutations to config
+        // are picked up automatically without an explicit refresh step.
+        this._transitionable = new Transitionable(fogProperties, scope, configOptions);
         this.set(fogOptions, configOptions);
         this._transitioning = this._transitionable.untransitioned();
         this._transform = transform;
@@ -176,7 +181,7 @@ class Fog extends Evented {
     }
 
     updateConfig(configOptions?: ConfigOptions | null) {
-        this._transitionable.setTransitionOrValue(this._options, new Map(configOptions));
+        this._transitionable.setTransitionOrValue(this._options, configOptions);
     }
 
     updateTransitions(parameters: TransitionParameters) {

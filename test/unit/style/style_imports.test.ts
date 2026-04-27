@@ -14,6 +14,7 @@ import {makeFQID} from '../../../src/util/fqid';
 import {ImageId} from '../../../src/style-spec/expression/types/image_id';
 import {StubMap} from './utils';
 import browser from '../../../src/util/browser';
+import EvaluationParameters from '../../../src/style/evaluation_parameters';
 
 function createStyleJSON(properties) {
     return Object.assign({
@@ -2998,6 +2999,175 @@ describe('Style#setConfigProperty', () => {
 
         style.setConfigProperty('standard', 'showBackground', true);
         expect(layer.getLayoutProperty('visibility')).toEqual('visible');
+    });
+});
+
+describe('Style initial config load', () => {
+    test('Does not queue redundant source-cache reloads for config-dependent layers on initial load', async () => {
+        const style = new Style(new StubMap());
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const initialStyle = createStyleJSON({
+            imports: [{
+                id: 'standard',
+                url: '/standard.json',
+                config: {circleColor: 'red'},
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                data: createStyleJSON({
+                    sources: {
+                        geo: {type: 'geojson', data: {type: 'FeatureCollection', features: []}}
+                    },
+                    layers: [{
+                        id: 'circle',
+                        type: 'circle',
+                        source: 'geo',
+                        paint: {'circle-color': ['config', 'circleColor']}
+                    }],
+                    schema: {
+                        circleColor: {default: 'blue'}
+                    }
+                })
+            }]
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        style.loadJSON(initialStyle);
+
+        await waitFor(style, "style.load");
+
+        // The layer is config-dependent, so it should be tracked as such.
+        const layerFqid = makeFQID('circle', 'standard');
+        const fragmentStyle = style.getFragmentStyle('standard');
+        expect(fragmentStyle._configDependentLayers.has(layerFqid)).toBe(true);
+
+        // But because the layer was constructed with a live reference to the
+        // shared options Map, no source-cache reload should have been queued
+        // for the layer's source on initial load — the very first `setLayers`
+        // broadcast already ships the config-aware layer to workers.
+        const sourceFqid = makeFQID('geo', 'standard');
+        expect(fragmentStyle._changes.getUpdatedSourceCaches()[sourceFqid]).toBeUndefined();
+
+        // And the layer should not have been queued in the dirty-layer set
+        // either.
+        const updates = fragmentStyle._changes.getLayerUpdatesByScope();
+        const standardUpdates = updates['standard'];
+        if (standardUpdates && standardUpdates.updatedIds) {
+            expect(standardUpdates.updatedIds).not.toContain('circle');
+        }
+    });
+
+    test('Initial load broadcasts setLayers but not updateLayers', async () => {
+        const style = new Style(new StubMap());
+
+        const broadcastedKeys: string[] = [];
+        const originalBroadcast = style.dispatcher.broadcast.bind(style.dispatcher);
+        style.dispatcher.broadcast = function (key, value, callback) {
+            broadcastedKeys.push(key);
+            return originalBroadcast(key, value, callback);
+        };
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const initialStyle = createStyleJSON({
+            imports: [{
+                id: 'standard',
+                url: '/standard.json',
+                config: {showBackground: true},
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                data: createStyleJSON({
+                    layers: [{
+                        id: 'background',
+                        type: 'background',
+                        layout: {visibility: ['case', ['config', 'showBackground'], 'visible', 'none']}
+                    }],
+                    schema: {showBackground: {default: false}}
+                })
+            }]
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        style.loadJSON(initialStyle);
+        await waitFor(style, "style.load");
+
+        // Must broadcast setLayers (initial layer transfer to workers).
+        expect(broadcastedKeys).toContain('setLayers');
+        // Must NOT broadcast updateLayers (no runtime diffs on initial load).
+        expect(broadcastedKeys).not.toContain('updateLayers');
+    });
+
+    test('Config values are baked into config-dependent expressions at initial load', async () => {
+        const style = new Style(new StubMap());
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const initialStyle = createStyleJSON({
+            imports: [{
+                id: 'standard',
+                url: '/standard.json',
+                config: {showBackground: true},
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                data: createStyleJSON({
+                    layers: [{
+                        id: 'background',
+                        type: 'background',
+                        layout: {visibility: ['case', ['config', 'showBackground'], 'visible', 'none']}
+                    }],
+                    schema: {showBackground: {default: false}}
+                })
+            }]
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        style.loadJSON(initialStyle);
+        await waitFor(style, "style.load");
+
+        // Visibility was set via the import's `config: {showBackground: true}`,
+        // overriding the schema default of `false`. The layer must reflect the
+        // import-supplied config value immediately after style.load — without
+        // any further `updateConfigDependencies` round-trip.
+        const layer = style.getLayer(makeFQID('background', 'standard'));
+        expect(layer.getLayoutProperty('visibility')).toEqual('visible');
+    });
+
+    test('Config-dependent fog property is evaluated against the live config map', async () => {
+        const style = new Style(new StubMap());
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const initialStyle = createStyleJSON({
+            imports: [{
+                id: 'standard',
+                url: '/standard.json',
+                config: {fogStart: 1, fogEnd: 5},
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                data: createStyleJSON({
+                    fog: {
+                        range: [['config', 'fogStart'], ['config', 'fogEnd']],
+                        color: 'white',
+                        'horizon-blend': 0
+                    },
+                    schema: {
+                        fogStart: {default: 0},
+                        fogEnd: {default: 10}
+                    }
+                })
+            }]
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        style.loadJSON(initialStyle);
+        await waitFor(style, "style.load");
+
+        // Recalculate so fog `properties` reflect the current config snapshot,
+        // then read evaluated `range` via the `state` getter (which is what the
+        // renderer uses).
+        style.update(new EvaluationParameters(0));
+        expect(style.fog.properties.get('range')).toEqual([1, 5]);
+
+        // Mutating config at runtime must flow through to fog without us
+        // having to rebuild the Fog instance — verifies the live-reference
+        // wiring matches what `StyleLayer` does.
+        style.setConfigProperty('standard', 'fogStart', 2);
+        style.setConfigProperty('standard', 'fogEnd', 8);
+        style.update(new EvaluationParameters(0));
+        expect(style.fog.properties.get('range')).toEqual([2, 8]);
     });
 });
 
