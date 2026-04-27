@@ -158,11 +158,19 @@ test/
 
 - The project has TypeScript configured with `strict: false`, but write all TypeScript code as if strict mode is enabled
 - This means: always handle `null`/`undefined` cases, use proper type annotations, avoid `any` types, and ensure type safety
+- Prefer explicit return types over `// @ts-expect-error` suppressions for functions that may not return a value
+- Prefer literal unions over boolean flags; allows future extension without breaking changes
 
 ## Testing Guidelines
 
 - Tests use Vitest framework with Playwright as the browser provider
 - Install Playwright browsers: `npx playwright install chromium`
+- Any PR that changes rendering behavior (shader changes, draw function logic, bucket data changes) must include a render test in `test/integration/render-tests/`
+- For query behavior changes, add corresponding query tests covering all affected layer types
+- Render tests for bug fixes must fail without the fix; a tolerance loose enough to pass either way is useless
+- Every render test `style.json` must include a `_comment` field explaining what it checks; drop unused intermediate `wait` steps
+- Don't inflate render test tolerance to make a failing test pass — investigate the root cause
+- Size render test expected images to the minimum needed (e.g., 32×64, not 128×128)
 
 ### Writing Unit Tests
 
@@ -181,6 +189,8 @@ test/
 - Function descriptions: start with third-person verb (e.g., "Sets...", "Returns...")
 - For functions returning values, start with "Returns..."
 - Event descriptions: start with "Fired when..."
+- Style-spec `doc` fields in `v8.json` render verbatim in the public API reference — use unambiguous language, avoid internal terms, and don't reference implementation details
+- When adding a new property to `v8.json`, populate the `sdk-support` table and set `experimental: true` until release version is confirmed
 
 ## WebGL and Shaders
 
@@ -188,3 +198,10 @@ test/
 - Shader programs are dynamically generated based on style properties
 - Data-driven styling creates paint vertex arrays at layout time
 - See [@src/shaders/README.md](src/shaders/README.md) for shader documentation
+- Use named `#define` constants for integer mode values in shaders — never bare magic numbers like `if (u_blend_mode == 1)`
+- Use `#if defined(A) && defined(B)` for compound shader conditionals (not `#ifdef`); required for the Metal preprocessing pipeline
+
+## Performance
+
+- Allocate GPU objects (buffers, textures, bind groups, UBOs) at bucket creation or style load time; invalidate only when underlying data changes. **Never allocate GPU objects inside draw functions that run every frame.**
+- In hot paths, prefer flat typed arrays (`Float32Array`, `Uint16Array`) over arrays of objects or nested arrays
