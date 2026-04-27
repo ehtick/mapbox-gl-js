@@ -22,8 +22,8 @@
 <div id="map"></div>
 <!-- <input type="range" id="radius" min="0" max="50" step="any" value="20" />
  -->
-<script src="../dist/mapbox-gl-dev.js"></script>
 <script type="module">
+import mapboxgl from '../dist/esm-dev/mapbox-gl.js';
 import {getAccessToken} from './access_token_generated.js';
 
 mapboxgl.accessToken = getAccessToken();

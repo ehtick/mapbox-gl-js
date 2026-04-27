@@ -27,11 +27,12 @@ Mapbox GL JS is a JavaScript library for interactive, customizable vector maps o
 # Start development server with live reload
 npm run start
 
-# Build development version
-npm run build-dev
+# Build development version (ESM)
+npm run build-esm-dev
 
 # Build production bundles
-npm run build-prod  # Minified production build
+npm run build-esm-prod  # Minified ESM production build
+npm run build-prod  # Minified UMD production build
 npm run build-css       # Build CSS file
 
 # Generate code (style code, struct arrays, and TypeScript types)

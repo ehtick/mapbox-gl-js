@@ -23,14 +23,13 @@
 <body>
     <div id="map"></div>
 
+    <script src="../dist/mapbox-gl.js"></script>
     <script type="module">
-        // Note: to test the ESM build, run this debug page with "npm run start-esm"
-        import mapbox from '../dist/esm-dev/mapbox-gl.js';
         import {getAccessToken} from './access_token_generated.js';
 
-        mapbox.accessToken = getAccessToken();
+        mapboxgl.accessToken = getAccessToken();
 
-        const map = window.map = new mapbox.Map({
+        const map = window.map = new mapboxgl.Map({
             container: 'map',
             zoom: 12.5,
             center: [-122.4194, 37.7749],

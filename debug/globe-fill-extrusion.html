@@ -28,8 +28,8 @@
     <label><input type="range" min="0" max="100" value="100" class="slider" id="buildings-opacity-slider"> opacity: </label><label id='opacity'>1.0</label><br />
 </div>
 
-<script src="../dist/mapbox-gl-dev.js"></script>
 <script type="module">
+import mapboxgl from '../dist/esm-dev/mapbox-gl.js';
 import {getAccessToken} from './access_token_generated.js';
 
 mapboxgl.accessToken = getAccessToken();

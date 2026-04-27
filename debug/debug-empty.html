@@ -25,8 +25,8 @@
     <label><input id="show-symbol-collision-boxes-checkbox" type="checkbox"> collision debug</label><br />
     <label><input id="freeze-tile-coverage-checkbox" type="checkbox"> freeze tile coverage </label><br />
 </div>
-<script src="../dist/mapbox-gl-dev.js"></script>
 <script type="module">
+import mapboxgl from '../dist/esm-dev/mapbox-gl.js';
 import {getAccessToken} from './access_token_generated.js';
 
 mapboxgl.accessToken = getAccessToken();

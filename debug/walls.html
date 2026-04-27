@@ -20,17 +20,15 @@
 <div id="map"></div>
 <div id="pane"></div>
 
-<script src="../dist/mapbox-gl-dev.js"></script>
-<script type="module">
-import {getAccessToken} from './access_token_generated.js';
-
-mapboxgl.accessToken = getAccessToken();
-</script>
 <script src='https://unpkg.com/d3@7.8.5/dist/d3.min.js'></script>
 <script type='module'>
     /* globals d3 */
 
+    import mapboxgl from '../dist/esm-dev/mapbox-gl.js';
+    import {getAccessToken} from './access_token_generated.js';
     import {Pane} from 'https://cdn.jsdelivr.net/npm/tweakpane@4.0.3/dist/tweakpane.min.js';
+
+    mapboxgl.accessToken = getAccessToken();
 
     const PARAMS = {
       'fill-extrusion-line-width': 0.5

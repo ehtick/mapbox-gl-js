@@ -25,8 +25,8 @@
     <label><input type="range" min="-100" max="100" value="0" class="slider" id="blur-slider"> blur: </label><label id="glow">0.0</label><br />
 </div>
 
-<script src="../dist/mapbox-gl-dev.js"></script>
 <script type="module">
+import mapboxgl from '../dist/esm-dev/mapbox-gl.js';
 import {getAccessToken} from './access_token_generated.js';
 
 mapboxgl.accessToken = getAccessToken();

@@ -48,14 +48,12 @@
     <div id="map"></div>
     <div id="config"></div>
     <script src="./dynamic.js"></script>
-    <script src="../dist/mapbox-gl-dev.js"></script>
-    <script type="module">
-import {getAccessToken} from './access_token_generated.js';
-
-mapboxgl.accessToken = getAccessToken();
-</script>
     <script type='module'>
+        import mapboxgl from '../dist/esm-dev/mapbox-gl.js';
+        import {getAccessToken} from './access_token_generated.js';
         import {Pane} from 'https://cdn.jsdelivr.net/npm/tweakpane@4.0.3/dist/tweakpane.min.js';
+
+        mapboxgl.accessToken = getAccessToken();
 
         const pane = new Pane({
             title: 'Parameters',

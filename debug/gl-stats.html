@@ -8,8 +8,8 @@
 let now = performance.now();
 window.performance.now = () => now;
 </script>
-<script src="../dist/mapbox-gl.js"></script>
 <script type="module">
+import mapboxgl from '../dist/esm-dev/mapbox-gl.js';
 import {getAccessToken} from './access_token_generated.js';
 
 mapboxgl.accessToken = getAccessToken();

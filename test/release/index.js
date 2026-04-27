@@ -14,7 +14,7 @@ const REGEX_PATTERNS = {
     API_KEY: /pk\..*?"/g,
     LOCAL_JS_SCRIPT: /<script src="(.*)mapbox-gl(.*)\.js"><\/script>/g,
     LOCAL_CSS_LINK: /<link rel="stylesheet"(.*)mapbox-gl\.css"(.*)\/>/g,
-    LOCAL_ESM_SCRIPT: /import mapbox from '\.\.\/dist\/esm-dev\/mapbox-gl\.js';/g
+    LOCAL_ESM_SCRIPT: /import mapboxgl from '\.\.\/dist\/esm-dev\/mapbox-gl\.js';/g
 };
 
 /**
@@ -134,9 +134,9 @@ const pages = [
         "url": "./debug/raster-array.html"
     },
     {
-        "key": "esm",
-        "title": "ESM Bundle",
-        "url": "./debug/esm.html"
+        "key": "umd",
+        "title": "UMD Bundle",
+        "url": "./debug/umd.html"
     }
 ];
 
@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return doc
             .replace(REGEX_PATTERNS.LOCAL_JS_SCRIPT, `<script src="${jsUrl}"></script>`)
             .replace(REGEX_PATTERNS.LOCAL_CSS_LINK, `<link rel="stylesheet" href="${cssUrl}" />`)
-            .replace(REGEX_PATTERNS.LOCAL_ESM_SCRIPT, `import mapbox from './dist/esm/mapbox-gl.js';`);
+            .replace(REGEX_PATTERNS.LOCAL_ESM_SCRIPT, `import mapboxgl from './dist/esm-dev/mapbox-gl.js';`);
     }
 
     /**

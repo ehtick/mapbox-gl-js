@@ -75,7 +75,7 @@ npm install
 Start the debug server
 
 ```bash
-MAPBOX_ACCESS_TOKEN={YOUR_MAPBOX_ACCESS_TOKEN} npm run start-debug
+MAPBOX_ACCESS_TOKEN={YOUR_MAPBOX_ACCESS_TOKEN} npm start
 ```
 
 Open the debug page at [http://localhost:9966/debug/](http://localhost:9966/debug/)
