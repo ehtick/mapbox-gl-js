@@ -50,7 +50,8 @@ type GlobalDefinesType =
     | 'RENDER_SHADOWS'
     | 'RENDER_TO_TEXTURE'
     | 'TERRAIN_DEM_FLOAT_FORMAT'
-    | 'TERRAIN';
+    | 'TERRAIN'
+    | 'TERRAIN_VERTEX_MORPHING';
 
 export type DynamicDefinesType =
     | GlobalDefinesType

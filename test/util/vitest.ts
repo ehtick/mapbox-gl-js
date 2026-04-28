@@ -78,6 +78,10 @@ export function createMap(options?, callback?: (err: any, map: Map) => void) {
         interactive: false,
         attributionControl: false,
         performanceMetricsCollection: false,
+        // Unit tests render single frames or none at all — precompile's idle-scheduled work and
+        // sweeps interact poorly with fake timers and don't exercise behavior these tests cover.
+        // Tests that specifically target the precompiler opt in by passing `precompilePrograms: true`.
+        precompilePrograms: false,
         trackResize: true,
         testMode: true,
         style: {

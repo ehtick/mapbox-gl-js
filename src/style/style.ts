@@ -813,10 +813,6 @@ class Style extends Evented<MapEvents> {
             scope: this.scope,
             options: this.options
         });
-
-        if (this._programPrecompiler) {
-            this._programPrecompiler.reset();
-        }
     }
 
     _isInternalStyle(json: StyleSpecification): boolean {
@@ -1093,6 +1089,11 @@ class Style extends Evented<MapEvents> {
         this.mergeSources();
         this.mergeLayers();
         this.mergeIndoor();
+
+        // Style state (projection / terrain / fog / lights) just settled; rebuild the precompile queue
+        // so it sees the merged axes, not whatever was set before imports resolved. mergeAll runs at
+        // initial load (once per import resolution) and on state changes via _reloadImports / setState.
+        if (this._programPrecompiler) this._programPrecompiler.reset();
     }
 
     forEachFragmentStyle(fn: (style: Style) => void) {
@@ -1160,6 +1161,9 @@ class Style extends Evented<MapEvents> {
         } else {
             this.terrain = terrain;
         }
+
+        // Terrain axis flipped — rebuild precompile to pick up the new gating.
+        if (this._programPrecompiler) this._programPrecompiler.reset();
     }
 
     mergeProjection() {
@@ -1171,6 +1175,9 @@ class Style extends Evented<MapEvents> {
         });
 
         this.projection = projection || {name: 'mercator'};
+
+        // Projection axis flipped — rebuild precompile to pick up the new globe gating.
+        if (this._programPrecompiler) this._programPrecompiler.reset();
     }
 
     mergeSources() {
@@ -1748,8 +1755,12 @@ class Style extends Evented<MapEvents> {
     }
 
     handleIdle() {
-        if (!this._programPrecompiler || !this.map.painter) return;
-        this._programPrecompiler.processQueue(this.map.painter, this);
+        const painter = this.map.painter;
+        if (!painter) return;
+        painter.context.sweepPendingPrograms();
+        if (this._programPrecompiler) {
+            this._programPrecompiler.processQueue(painter, this);
+        }
     }
 
     handleContextLost() {
@@ -2317,6 +2328,10 @@ class Style extends Evented<MapEvents> {
 
     setLights(lights?: Array<LightsSpecification> | null) {
         this._checkLoaded();
+
+        // Lights affect both `enable3dLights()` (LIGHTING_3D_MODE static gate) and shadows (RENDER_SHADOWS axis).
+        // Reset precompile so the next update rebuilds with fresh axes regardless of the path below.
+        if (this._programPrecompiler) this._programPrecompiler.reset();
 
         if (!lights) {
             delete this.ambientLight;
@@ -3845,11 +3860,7 @@ class Style extends Evented<MapEvents> {
             // Remove fog
             delete this.fog;
             delete this.stylesheet.fog;
-            this._markersNeedUpdate = true;
-            return;
-        }
-
-        if (!this.fog) {
+        } else if (!this.fog) {
             // Initialize Fog
             this._createFog(fogOptions);
         } else {
@@ -3864,6 +3875,8 @@ class Style extends Evented<MapEvents> {
         }
 
         this._markersNeedUpdate = true;
+        // Fog axis flipped — rebuild precompile.
+        if (this._programPrecompiler) this._programPrecompiler.reset();
     }
 
     getSnow(): SnowSpecification | null | undefined {

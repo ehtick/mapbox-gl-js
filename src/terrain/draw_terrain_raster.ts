@@ -141,11 +141,6 @@ const SHADER_DEFAULT = 0;
 const SHADER_MORPHING = 1;
 const defaultDuration = 250;
 
-const shaderDefines = {
-    "0": null,
-    "1": 'TERRAIN_VERTEX_MORPHING'
-};
-
 function drawTerrainForGlobe(painter: Painter, terrain: Terrain, sourceCache: SourceCache, tileIDs: Array<OverscaledTileID>, now: number) {
     const context = painter.context;
     const gl = context.gl;
@@ -157,12 +152,12 @@ function drawTerrainForGlobe(painter: Painter, terrain: Terrain, sourceCache: So
 
     const setShaderMode = (coord: OverscaledTileID, mode: number) => {
         if (programMode === mode) return;
-        const defines = [shaderDefines[mode], 'PROJECTION_GLOBE_VIEW'];
-
+        const defines: DynamicDefinesType[] = [];
+        if (mode === SHADER_MORPHING) defines.push('TERRAIN_VERTEX_MORPHING');
+        defines.push('PROJECTION_GLOBE_VIEW');
         if (useCustomAntialiasing) defines.push('CUSTOM_ANTIALIASING');
 
         const affectedByFog = painter.isTileAffectedByFog(coord);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         program = painter.getOrCreateProgram('globeRaster', {defines, overrideFog: affectedByFog});
         programMode = mode;
     };
@@ -307,8 +302,7 @@ function drawTerrainRaster(painter: Painter, terrain: Terrain, sourceCache: Sour
             if (programMode === mode)
                 return;
             const modes: DynamicDefinesType[] = [];
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-            modes.push(shaderDefines[mode]);
+            if (mode === SHADER_MORPHING) modes.push('TERRAIN_VERTEX_MORPHING');
             if (cutoffParams.shouldRenderCutoff) {
                 modes.push('RENDER_CUTOFF');
             }

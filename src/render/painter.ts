@@ -94,6 +94,9 @@ export type CreateProgramParams = {
     defines?: DynamicDefinesType[];
     overrideFog?: boolean;
     overrideRtt?: boolean;
+    overrideTerrain?: boolean;
+    overrideGlobe?: boolean;
+    precompiled?: boolean;
 };
 
 type WireframeOptions = {
@@ -803,6 +806,10 @@ class Painter {
 
     render(style: Style, options: PainterOptions) {
         const renderStartTime = PerformanceUtils.now();
+
+        // Finalize any pending programs whose parallel compile finished since last frame.
+        // Prevents later uniform-set / draw calls in this frame from triggering sync stalls.
+        this.context.sweepPendingPrograms();
 
         Debug.run(() => {
             // Update time delta and current timestamp
@@ -1728,8 +1735,10 @@ class Painter {
      * @returns {string[]}
      * @private
      */
-    currentGlobalDefines(name: string, overrideFog?: boolean | null, overrideRtt?: boolean | null): DynamicDefinesType[] {
+    currentGlobalDefines(name: string, overrideFog?: boolean | null, overrideRtt?: boolean | null, overrideTerrain?: boolean | null, overrideGlobe?: boolean | null): DynamicDefinesType[] {
         const rtt = (overrideRtt === undefined) ? this.terrain && this.terrain.renderingToTexture : overrideRtt;
+        const terrainElevated = (overrideTerrain === undefined) ? this.terrainRenderModeElevated() : overrideTerrain;
+        const globe = (overrideGlobe === undefined) ? this.transform.projection.name === 'globe' : overrideGlobe;
         const defines: DynamicDefinesType[] = [];
 
         if (this.style && this.style.enable3dLights()) {
@@ -1744,11 +1753,11 @@ class Painter {
                 }
             }
         }
-        if (this.terrainRenderModeElevated()) {
+        if (terrainElevated) {
             defines.push('TERRAIN');
             if (this.linearFloatFilteringSupported()) defines.push('TERRAIN_DEM_FLOAT_FORMAT');
         }
-        if (this.transform.projection.name === 'globe') defines.push('GLOBE');
+        if (globe) defines.push('GLOBE');
         // When terrain is active, fog is rendered as part of draping, not as part of tile
         // rendering. Removing the fog flag during tile rendering avoids additional defines.
         if (this._fogVisible && !rtt && (overrideFog === undefined || overrideFog)) {
@@ -1762,23 +1771,26 @@ class Painter {
 
     getOrCreateProgram<T extends ProgramName>(name: T, options?: CreateProgramParams): Program<ProgramUniformsType[T]> {
         this.cache = this.cache || {};
-        const defines = (options && options.defines) || [];
-        const config = options && options.config;
-        const overrideFog = options && options.overrideFog;
-        const overrideRtt = options && options.overrideRtt;
+        const {defines, config, overrideFog, overrideRtt, overrideTerrain, overrideGlobe, precompiled} = options || {};
 
-        const globalDefines = this.currentGlobalDefines(name, overrideFog, overrideRtt);
-        const allDefines = globalDefines.concat(defines);
+        const globalDefines = this.currentGlobalDefines(name, overrideFog, overrideRtt, overrideTerrain, overrideGlobe);
+        const allDefines = globalDefines.concat(defines || []);
 
-        const shaderSource = shaders[name as keyof typeof shaders] || (HD.shaders && HD.shaders[name as keyof typeof HD.shaders]);
+        const shaderSource = this.getShaderSource(name);
         const uniforms = ((programUniforms as Record<string, (context: Context) => UniformBindings>)[name] || (HD.programUniforms as Record<string, (context: Context) => UniformBindings>)[name]) as (context: Context) => UniformBindings;
         const key = Program.cacheKey(shaderSource, name, allDefines, config);
 
         if (!this.cache[key]) {
-            this.cache[key] = new Program(this.context, name, shaderSource, config, uniforms, allDefines);
+            this.cache[key] = new Program(this.context, name, shaderSource, config, uniforms, allDefines, precompiled);
         }
 
         return this.cache[key] as Program<ProgramUniformsType[T]>;
+    }
+
+    // Returns shader source metadata for a program name, including the usedDefines set
+    // used to prune cartesian variant enumeration in the precompiler.
+    getShaderSource(name: ProgramName) {
+        return shaders[name as keyof typeof shaders] || (HD.shaders && HD.shaders[name as keyof typeof HD.shaders]);
     }
 
     /*
