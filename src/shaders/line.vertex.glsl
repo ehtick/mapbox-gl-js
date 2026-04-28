@@ -43,6 +43,9 @@ uniform mat2 u_pixels_to_tile_units;
 uniform vec2 u_units_to_pixels;
 uniform lowp float u_device_pixel_ratio;
 uniform float u_width_scale;
+// Note: This value is zero if line-z-offset has feature dependencies,
+// in that case the value is passed as a vertex attribute instead of a uniform.
+uniform float u_z_offset;
 uniform highp float u_floor_width_scale;
 
 #ifdef RENDER_LINE_CURVE
@@ -199,9 +202,9 @@ void main() {
     #pragma mapbox: initialize lowp vec4 border_color
     #pragma mapbox: initialize lowp float emissive_strength
 
-    float a_z_offset;
+    float a_z_offset = u_z_offset;
 #if defined(ELEVATED) || defined(ELEVATED_ROADS)
-    a_z_offset = a_z_offset_width.x;
+    a_z_offset += a_z_offset_width.x;
 #endif
 #ifdef DEBUG_ELEVATION_ID
     v_elevation_id_col = a_elevation_id_col;
