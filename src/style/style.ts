@@ -4104,7 +4104,6 @@ class Style extends Evented<MapEvents> {
         // Shared managers should be removed only on removing the root style
         if (this.isRootStyle()) {
             this.imageManager.setEventedParent(null);
-            this.imageManager.destroy();
             this.modelManager.setEventedParent(null);
             this.modelManager.destroy();
             this.dispatcher.remove();
@@ -4618,7 +4617,7 @@ class Style extends Evented<MapEvents> {
     // Callbacks from web workers
 
     getImages(mapId: number, params: ActorMessages['getImages']['params'], callback: ActorMessages['getImages']['callback']) {
-        this.imageManager.getImages(params.images, params.scope, callback);
+        this.imageManager.getImages(params.icons.concat(params.patterns), params.scope, callback);
 
         // Apply queued image changes before setting the tile's dependencies so that the tile
         // is not reloaded unecessarily. Without this forced update the reload could happen in cases
@@ -4630,10 +4629,12 @@ class Style extends Evented<MapEvents> {
         // - the next frame triggers a reload of this tile even though it already has the latest version
         this._updateTilesForChangedImages();
 
+        const iconDeps = params.icons.map(id => ImageId.toString(id));
+        const patternDeps = params.patterns.map(id => ImageId.toString(id));
         const setDependencies = (sourceCache: SourceCache) => {
             if (sourceCache) {
-                const dependencies = params.images.map(id => ImageId.toString(id));
-                sourceCache.setDependencies(params.tileID.key, params.type, dependencies);
+                sourceCache.setDependencies(params.tileID.key, 'icons', iconDeps);
+                sourceCache.setDependencies(params.tileID.key, 'patterns', patternDeps);
             }
         };
 
@@ -4641,7 +4642,7 @@ class Style extends Evented<MapEvents> {
         setDependencies(this._mergedOtherSourceCaches[fqid]);
         setDependencies(this._mergedSymbolSourceCaches[fqid]);
 
-        if (params.images.some(id => id.iconsetId)) {
+        if (params.icons.some(id => id.iconsetId) || params.patterns.some(id => id.iconsetId)) {
             // If the image is an iconset, we need another render cycle
             // to mark the raster-array tiles as used so we will
             // request them during Style#updateImageProviders

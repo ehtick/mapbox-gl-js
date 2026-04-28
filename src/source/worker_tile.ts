@@ -32,7 +32,7 @@ import type {Bucket, PopulateParameters, ImageDependenciesMap} from '../data/buc
 import type Actor from '../util/actor';
 import type {TypedStyleLayer} from '../style/style_layer/typed_style_layer';
 import type StyleLayerIndex from '../style/style_layer_index';
-import type {StyleImage, StyleImageMap} from '../style/style_image';
+import type {StyleImageMap} from '../style/style_image';
 import type {
     WorkerSourceVectorTileRequest,
     WorkerSourceVectorTileCallback,
@@ -48,7 +48,6 @@ import type {ImageVariant, StringifiedImageVariant} from '../style-spec/expressi
 import type {StyleModelMap} from '../style/style_mode';
 import type {IndoorTileOptions} from '../style/indoor_data';
 
-type RasterizationStatus = {iconsPending: boolean, patternsPending: boolean};
 class WorkerTile {
     tileID: OverscaledTileID;
     uid: number;
@@ -360,21 +359,24 @@ class WorkerTile {
                         }
                     }
 
-                    const rasterizationStatus: RasterizationStatus = {iconsPending: true, patternsPending: true};
-                    this.rasterizeIfNeeded(actor, iconMap, iconRasterizationTasks, () => {
-                        rasterizationStatus.iconsPending = false;
-                        postRasterizationLayout(symbolLayoutData, glyphAtlas, rasterizationStatus, m, imageVersions);
-                    });
-                    this.rasterizeIfNeeded(actor, patternMap, patternRasterizationTasks, () => {
-                        rasterizationStatus.patternsPending = false;
-                        postRasterizationLayout(symbolLayoutData, glyphAtlas, rasterizationStatus, m, imageVersions);
-                    });
+                    if (iconRasterizationTasks.size || patternRasterizationTasks.size) {
+                        this.rasterizeTask = actor.send('rasterizeImages', {scope: this.scope, iconTasks: iconRasterizationTasks, patternTasks: patternRasterizationTasks}, (err: Error, rasterizedImages: RasterizedImageMap) => {
+                            if (!err) {
+                                for (const [id, data] of rasterizedImages.entries()) {
+                                    if (iconMap.has(id)) iconMap.set(id, Object.assign(iconMap.get(id), {data}));
+                                    if (patternMap.has(id)) patternMap.set(id, Object.assign(patternMap.get(id), {data}));
+                                }
+                            }
+                            postRasterizationLayout(symbolLayoutData, glyphAtlas, m, imageVersions);
+                        });
+                    } else {
+                        postRasterizationLayout(symbolLayoutData, glyphAtlas, m, imageVersions);
+                    }
 
                 }
             };
 
-            const postRasterizationLayout = (symbolLayoutData: Record<string, SymbolBucketData>, glyphAtlas: GlyphAtlas, rasterizationStatus: RasterizationStatus, m: PerformanceMark, imageVersions?: Map<string, number>) => {
-                if (rasterizationStatus.iconsPending || rasterizationStatus.patternsPending) return;
+            const postRasterizationLayout = (symbolLayoutData: Record<string, SymbolBucketData>, glyphAtlas: GlyphAtlas, m: PerformanceMark, imageVersions?: Map<string, number>) => {
 
                 // Check if we have any images - if not, skip atlas caching to avoid extra round-trips
                 const hasImages = iconMap.size > 0 || patternMap.size > 0;
@@ -484,24 +486,18 @@ class WorkerTile {
                     glyphMap = {};
                 }
 
-                // Initialize shared version map for both icons and patterns
-                // Note: If an icon and pattern share the same ID, the later response will overwrite
-                // the version. This is acceptable since icon/pattern IDs are typically distinct,
-                // and both use the same underlying image version from ImageManager.
                 imageVersions = new Map();
 
-                const images = Array.from(options.iconDependencies.keys()).map((id) => ImageId.parse(id));
-                if (images.length) {
-                    const params = {images, source: this.source, scope: this.scope, tileID: this.tileID, type: 'icons'} as const;
-                    actor.send('getImages', params, (err: Error, getImagesResult: {images: StyleImageMap<StringifiedImageId>; versions: Map<string, number>}) => {
-                        if (error) {
-                            return;
-                        }
-
+                const icons = Array.from(options.iconDependencies.keys()).map((id) => ImageId.parse(id));
+                const patterns = Array.from(options.patternDependencies.keys()).map((id) => ImageId.parse(id));
+                if (icons.length || patterns.length) {
+                    actor.send('getImages', {icons, patterns, source: this.source, scope: this.scope, tileID: this.tileID}, (err: Error, getImagesResult: {images: StyleImageMap<StringifiedImageId>; versions: Map<string, number>}) => {
+                        if (error) return;
                         error = err;
                         iconMap = new Map();
+                        patternMap = new Map();
                         iconRasterizationTasks = this.updateImageMapAndGetImageTaskQueue(iconMap, getImagesResult.images, options.iconDependencies);
-                        // Merge versions from icons response into shared imageVersions map
+                        patternRasterizationTasks = this.updateImageMapAndGetImageTaskQueue(patternMap, getImagesResult.images, options.patternDependencies);
                         for (const [id, version] of getImagesResult.versions.entries()) {
                             imageVersions.set(id, version);
                         }
@@ -509,28 +505,8 @@ class WorkerTile {
                     }, undefined, false, taskMetadata);
                 } else {
                     iconMap = new Map();
-                    iconRasterizationTasks = new Map();
-                }
-
-                const patterns = Array.from(options.patternDependencies.keys()).map((id) => ImageId.parse(id));
-                if (patterns.length) {
-                    const params = {images: patterns, source: this.source, scope: this.scope, tileID: this.tileID, type: 'patterns'} as const;
-                    actor.send('getImages', params, (err: Error, getImagesResult: {images: StyleImageMap<StringifiedImageId>; versions: Map<string, number>}) => {
-                        if (error) {
-                            return;
-                        }
-
-                        error = err;
-                        patternMap = new Map();
-                        patternRasterizationTasks = this.updateImageMapAndGetImageTaskQueue(patternMap, getImagesResult.images, options.patternDependencies);
-                        // Merge versions from patterns response into shared imageVersions map
-                        for (const [id, version] of getImagesResult.versions.entries()) {
-                            imageVersions.set(id, version);
-                        }
-                        maybePrepare();
-                    }, undefined, false, taskMetadata);
-                } else {
                     patternMap = new Map();
+                    iconRasterizationTasks = new Map();
                     patternRasterizationTasks = new Map();
                 }
             }
@@ -591,15 +567,6 @@ class WorkerTile {
         this.indoor = params.indoor;
     }
 
-    rasterizeIfNeeded(actor: Actor, outputMap: StyleImageMap<StringifiedImageVariant> | undefined, tasks: ImageRasterizationTasks, callback: () => void) {
-        const needRasterization = Array.from(outputMap.values()).some((image: StyleImage) => image.usvg);
-        if (needRasterization) {
-            this.rasterize(actor, outputMap, tasks, callback);
-        } else {
-            callback();
-        }
-    }
-
     updateImageMapAndGetImageTaskQueue(imageMap: StyleImageMap<StringifiedImageVariant>, images: StyleImageMap<StringifiedImageId>, imageDependencies: ImageDependenciesMap): ImageRasterizationTasks {
         const imageRasterizationTasks: ImageRasterizationTasks = new Map();
         for (const imageName of images.keys()) {
@@ -617,19 +584,6 @@ class WorkerTile {
         }
 
         return imageRasterizationTasks;
-    }
-
-    rasterize(actor: Actor, imageMap: StyleImageMap<StringifiedImageVariant>, tasks: ImageRasterizationTasks, callback: () => void) {
-        this.rasterizeTask = actor.send('rasterizeImages', {scope: this.scope, tasks}, (err: Error, rasterizedImages: RasterizedImageMap) => {
-            if (!err) {
-                for (const [id, data] of rasterizedImages.entries()) {
-                    const image = Object.assign(imageMap.get(id), {data});
-                    imageMap.set(id, image);
-                }
-            }
-
-            callback();
-        });
     }
 
     cancelRasterize() {

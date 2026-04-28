@@ -3,7 +3,6 @@ import Dispatcher from './dispatcher';
 
 let globalDispatcher: Dispatcher | null = null;
 let globalWorkerPool: WorkerPool | null | undefined;
-let imageRasterizerWorkerPool: WorkerPool | null | undefined;
 
 /**
  * Creates (if necessary) and returns the single, global WorkerPool instance
@@ -17,20 +16,8 @@ export function getGlobalWorkerPool(): WorkerPool {
     return globalWorkerPool;
 }
 
-// We have a separate worker pool for image rasterization because:
-//   - We need to share cache between tile workers
-//   - To unblock tiles worker pool when image rasterization is in progress
-export function getImageRasterizerWorkerPool(): WorkerPool {
-    if (!imageRasterizerWorkerPool) {
-        imageRasterizerWorkerPool = new WorkerPool('ImageRasterizer');
-    }
-
-    return imageRasterizerWorkerPool;
-}
-
 export function prewarm() {
     getGlobalWorkerPool().acquire(PRELOAD_POOL_ID);
-    getImageRasterizerWorkerPool().acquire(PRELOAD_POOL_ID);
 }
 
 export function getGlobalDispatcher(): Dispatcher {
@@ -58,9 +45,4 @@ export function clearPrewarmedResources() {
         }
     }
 
-    const rasterizerPool = imageRasterizerWorkerPool;
-    if (rasterizerPool && rasterizerPool.isPreloaded() && rasterizerPool.numActive() === 1) {
-        rasterizerPool.release(PRELOAD_POOL_ID);
-        imageRasterizerWorkerPool = null;
-    }
 }

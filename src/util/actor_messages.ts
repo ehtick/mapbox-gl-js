@@ -2,7 +2,7 @@ import type {ActorCallback} from './actor';
 import type {ConfigOptions} from '../style-spec/types/config_options';
 import type {GlyphMap, FontStacks} from '../render/glyph_manager';
 import type {ImageId, StringifiedImageId} from '../style-spec/expression/types/image_id';
-import type {ImageRasterizationTasks, ImageRasterizationWorkerTasks, RasterizedImageMap} from '../render/image_manager';
+import type {ImageRasterizationTasks, RasterizedImageMap} from '../render/image_manager';
 import type {LayerSpecification, ProjectionSpecification, SourceSpecification} from '../style-spec/types';
 import type {LoadGeoJSONRequest} from '../source/geojson_source';
 import type {LoadGeoJSONResult} from '../source/geojson_worker_source';
@@ -74,7 +74,7 @@ export type ActorMessages = {
     };
 
     'getImages': {
-        params: {images: ImageId[]; scope: string; source: string; tileID: OverscaledTileID; type: 'icons' | 'patterns'};
+        params: {icons: ImageId[]; patterns: ImageId[]; scope: string; source: string; tileID: OverscaledTileID};
         callback: ActorCallback<{images: StyleImageMap<StringifiedImageId>; versions: Map<string, number>}>;
     };
 
@@ -94,12 +94,7 @@ export type ActorMessages = {
     };
 
     'rasterizeImages': {
-        params: {scope: string; tasks: ImageRasterizationTasks};
-        callback: ActorCallback<RasterizedImageMap>;
-    };
-
-    'rasterizeImagesWorker': {
-        params: {scope: string; tasks: ImageRasterizationWorkerTasks};
+        params: {scope: string; iconTasks: ImageRasterizationTasks; patternTasks: ImageRasterizationTasks};
         callback: ActorCallback<RasterizedImageMap>;
     };
 
@@ -119,11 +114,6 @@ export type ActorMessages = {
     'reloadTile': {
         params: WorkerSourceTileRequest;
         callback: ActorCallback<unknown>;
-    };
-
-    'removeRasterizedImages': {
-        params: {scope: string; imageIds: ImageId[]};
-        callback: ActorCallback<void>;
     };
 
     'removeSource': {

@@ -11,7 +11,6 @@ import {enforceCacheSizeLimit} from '../util/tile_request_cache';
 import {PerformanceUtils} from '../util/performance';
 import {Event} from '../util/evented';
 import {getProjection} from '../geo/projection/index';
-import {ImageRasterizer} from '../render/image_rasterizer';
 import {isWorker} from '../util/util';
 import config from '../util/config';
 import {loadTileProvider} from './tile_provider';
@@ -20,7 +19,6 @@ import type Projection from '../geo/projection/projection';
 import type {ImageId} from '../style-spec/expression/types/image_id';
 import type {TaskMetadata} from '../util/scheduler';
 import type {RtlTextPlugin} from './rtl_text_plugin';
-import type {RasterizedImageMap} from '../render/image_manager';
 import type {ActorMessage, ActorMessages} from '../util/actor_messages';
 import type {WorkerSourceType, WorkerSource, WorkerSourceConstructor, WorkerSourceRequest} from './worker_source';
 import type {TileProvider} from './tile_provider';
@@ -56,7 +54,6 @@ export default class MapWorker {
     maxUniformBufferBindings: number | null | undefined;
     maxUniformBlockSizeDwords: number | null | undefined;
     disableSymbolUBO: boolean | null | undefined;
-    imageRasterizer: ImageRasterizer;
     worldview: string | undefined;
     rtlPluginParsingListeners: Array<Callback<boolean>>;
 
@@ -69,7 +66,6 @@ export default class MapWorker {
         this.availableImages = {};
         this.availableModels = {};
         this.isSpriteLoaded = {};
-        this.imageRasterizer = new ImageRasterizer();
         this.rtlPluginParsingListeners = [];
 
         this.projections = {};
@@ -436,20 +432,6 @@ export default class MapWorker {
         }
 
         return workerSources[mapId][scope][type][source];
-    }
-
-    rasterizeImagesWorker(mapId: number, params: ActorMessages['rasterizeImagesWorker']['params'], callback: ActorMessages['rasterizeImagesWorker']['callback']) {
-        const rasterizedImages: RasterizedImageMap = new Map();
-        for (const [id, {image, imageVariant}] of params.tasks.entries()) {
-            const rasterizedImage = this.imageRasterizer.rasterize(imageVariant, image, params.scope, mapId);
-            rasterizedImages.set(id, rasterizedImage);
-        }
-        callback(undefined, rasterizedImages);
-    }
-
-    removeRasterizedImages(mapId: number, params: ActorMessages['removeRasterizedImages']['params'], callback: ActorMessages['removeRasterizedImages']['callback']) {
-        this.imageRasterizer.removeImagesFromCacheByIds(params.imageIds, params.scope, mapId);
-        callback();
     }
 
     enforceCacheSizeLimit(mapId: number, limit: ActorMessages['enforceCacheSizeLimit']['params']) {

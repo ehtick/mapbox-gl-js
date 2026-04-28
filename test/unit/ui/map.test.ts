@@ -14,7 +14,7 @@ import {fixedNum} from '../../util/fixed';
 import {makeFQID} from '../../../src/util/fqid';
 import {ImageId} from '../../../src/style-spec/expression/types/image_id';
 import {createConstElevationDEM, setMockElevationTerrain} from '../../util/dem_mock';
-import {getGlobalWorkerPool, getImageRasterizerWorkerPool} from '../../../src/util/worker_pool_factory';
+import {getGlobalWorkerPool} from '../../../src/util/worker_pool_factory';
 
 // Mock implementation of elevation
 const createElevation = (func, exaggeration) => {
@@ -1411,17 +1411,16 @@ describe('Map', () => {
 
     test('#remove cleans up all workers on maps with terrain or vector icons', async () => {
         const pool = getGlobalWorkerPool();
-        const pool2 = getImageRasterizerWorkerPool();
-        const numActive = pool.numActive() + pool2.numActive();
+        const numActive = pool.numActive();
         const map = createMap();
         const TILE_SIZE = 128;
         const zeroDem = createConstElevationDEM(0, TILE_SIZE);
         await waitFor(map, 'style.load');
         setMockElevationTerrain(map, zeroDem, TILE_SIZE);
         await waitFor(map, 'render');
-        expect(pool.numActive() + pool2.numActive()).toEqual(numActive + 2);
+        expect(pool.numActive()).toEqual(numActive + 1);
         map.remove();
-        expect(pool.numActive() + pool2.numActive()).toEqual(numActive);
+        expect(pool.numActive()).toEqual(numActive);
     });
 });
 

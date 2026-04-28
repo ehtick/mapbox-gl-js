@@ -74,12 +74,7 @@ class Color {
      * translucentGreen.toString(); // = "rgba(26,207,26,0.73)"
      */
     toString(): string {
-        const [r, g, b, a] = [
-            this.r,
-            this.g,
-            this.b,
-            this.a
-        ];
+        const {r, g, b, a} = this;
         return `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},${a})`;
     }
 

@@ -2694,7 +2694,7 @@ test('Style#_updateTilesForChangedImages', async () => {
     await new Promise((resolve) => {
         expect(tile.hasDependency(['icons'], [imageIdStr])).toEqual(false);
 
-        style.getImages(0, {images: [imageId], source: 'geojson', scope: '', tileID, type: 'icons'}, (err, result) => {
+        style.getImages(0, {icons: [imageId], patterns: [], source: 'geojson', scope: '', tileID}, (err, result) => {
             expect(err).toBeFalsy();
             expect(result.images.size).toEqual(0);
             resolve();
@@ -2702,10 +2702,10 @@ test('Style#_updateTilesForChangedImages', async () => {
     });
 
     expect(style._updateTilesForChangedImages).toHaveBeenCalledTimes(1);
-    expect(sourceCache.setDependencies).toHaveBeenCalledTimes(1);
+    expect(sourceCache.setDependencies).toHaveBeenCalledTimes(2);
     expect(sourceCache.setDependencies).toHaveBeenCalledWith(tileID.key, 'icons', [imageIdStr]);
 
-    expect(tile.setDependencies).toHaveBeenCalledTimes(1);
+    expect(tile.setDependencies).toHaveBeenCalledTimes(2);
     expect(tile.setDependencies).toHaveBeenCalledWith('icons', [imageIdStr]);
     expect(tile.hasDependency(['icons'], [imageIdStr])).toEqual(true);
 
