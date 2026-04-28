@@ -74,7 +74,8 @@
         import currentMapbox from '../dist/esm-dev/mapbox-gl.js';
         import {getAccessToken} from './access_token_generated.js';
 
-        const accessToken = getAccessToken();
+        const params = new URLSearchParams(location.search);
+        const accessToken = params.get('accessToken') || getAccessToken();
         currentMapbox.accessToken = accessToken;
 
         let version = 'v3.22.0'; // fallback
@@ -94,7 +95,6 @@
         const latestMapbox = await import(`https://api.mapbox.com/mapbox-gl-js/${version}/esm/mapbox-gl.js`).then(mod => mod.default);
         latestMapbox.accessToken = accessToken;
 
-        const params = new URLSearchParams(location.search);
         const style = params.get('style');
 
         const mapOptions = {center: [0, 0], zoom: 1, hash: true};
