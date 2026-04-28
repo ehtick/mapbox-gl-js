@@ -1,20 +1,28 @@
 # CLAUDE.md
 
+## Hard rules (read first, every session)
+
+**Use LSP for symbol lookup, not grep/find.** If you reach for `grep`/`rg`/`find`/`Bash` to locate a symbol, type, function, class, method, or reference — stop and use LSP:
+- `goToDefinition`, `findReferences`, `hover`, `documentSymbol`, `incomingCalls`, `outgoingCalls`
+- Fall back to grep only if LSP errors, or for plain string/comment search.
+- Never use `workspaceSymbol` — dumps ~43K symbols.
+
+Defaulting to grep is a bug, not a preference.
+
 ## Project Overview
 
 Mapbox GL JS is a JavaScript library for interactive, customizable vector maps on the web. It uses WebGL to render vector tiles that conform to the Mapbox Vector Tile Specification.
 
 ## Workflow
 - Keep changes minimal and fully justified
-- Read relevant files before proposing edits; always inspect a referenced file before explaining or fixing it
+- Always inspect a referenced file before explaining or fixing it
 - Understand WHY code exists before changing it — GL JS has many browser quirks, performance hacks, and WebGL subtleties; check git blame when in doubt
-- Avoid over-engineering: don't add features, refactor, or "improve" beyond what was asked; no abstractions or helpers until you see repetition, and only if cleaner than the duplication
+- No abstractions or helpers until you see repetition, and only if cleaner than the duplication
 - Always run `npm run tsc` and `npm run lint` when you're done making a series of code changes
 - Run `npm run codegen` if you modify style properties or the style specification
 - Run `npm run test-typings` after modifying public API types or the style specification
 - Prefer running single tests, and avoid running the whole test suite, for performance
 - Never add any dependencies unless explicitly requested
-- Never use grep or find to look up symbols, types, or references — use LSP (`goToDefinition`, `findReferences`, `hover`, `documentSymbol`, `incomingCalls`, `outgoingCalls`) instead; fall back to grep only if LSP returns an error. Never use `workspaceSymbol` — it dumps the entire codebase (~43K symbols) and is never worth the token cost.
 
 ## Essential Commands
 
@@ -58,9 +66,7 @@ npm run lint-css
 
 ## Architecture Overview
 
-### Rendering Pipeline
-
-Tile parsing and layout run in Web Workers; rendering runs on the main thread.
+Tile parsing and layout run in Web Workers; rendering runs on the main thread. `Map` is the top-level handle, `Style` owns layers and configuration, `SourceCache` manages tile loading/caching per source, `Transform` owns camera state and projection math, and `Painter` orchestrates WebGL rendering.
 
 1. **Tile Parsing & Layout** (Worker)
    - `WorkerTile#parse()` decodes features and creates `Bucket` instances per style layer family
@@ -76,39 +82,31 @@ Tile parsing and layout run in Web Workers; rendering runs on the main thread.
    - `Painter#render()` iterates layers by render pass (`Painter.renderPass`: offscreen → opaque → translucent)
    - Layer-specific `draw*()` functions in `src/render/draw_*.ts`
 
-### Key Components
-
-- **Map**: Central class managing the map instance
-- **Style**: Manages map styling and layer configuration
-- **SourceCache**: Manages tile loading and caching
-- **Transform**: Handles map positioning and projections
-- **Painter**: WebGL rendering orchestration
-
 ## Project Structure
 
 ```
-3d-style/          # 3D building and model rendering (mirrors src structure)
+3d-style/ # (mirrors src)
 
 src/
-├── data/          # Data structures for tiles and rendering
-├── geo/           # Geographic calculations and transformations
-├── gl/            # WebGL abstraction layer
-├── render/        # Rendering implementation
-├── shaders/       # GLSL shaders with custom #pragma directives
-├── source/        # Tile source implementations
-├── style/         # Style layer implementations
-├── style-spec/    # Mapbox Style Specification (separate workspace)
-├── symbol/        # Text and icon rendering
-├── terrain/       # 3D terrain rendering
-├── ui/            # User interaction handlers
-└── util/          # Utility functions
+├── data/
+├── geo/
+├── gl/
+├── render/
+├── shaders/
+├── source/
+├── style/
+├── style-spec/ (separate workspace)
+├── symbol/
+├── terrain/
+├── ui/
+└── util/
 
 test/
-├── unit/          # Unit tests (Vitest)
-├── integration/   # Integration and render tests
-└── build/         # Build-related tests
+├── unit/
+├── integration/
+└── build/
 
-debug/             # Debug pages served by `npm start`
+debug/ # served by `npm start`
 ```
 
 ## Code Style
@@ -118,7 +116,6 @@ debug/             # Debug pages served by `npm start`
 - Don't use `!.` for non-null assertions (hides potential null issues)
 - Don't use `?.` or `??` operators (hides null handling, harder to debug)
 - Use `assert` for invariants
-- Break complex expressions into named variables, especially WebGL math
 - Object spread (`{...obj}`) is banned, use `Object.assign()` instead
 - Use `import type` for type-only imports
 - No TODO/FIXME comments in committed code
@@ -142,7 +139,6 @@ debug/             # Debug pages served by `npm start`
 
 ### Unit Tests
 
-- Use Vitest conventions
 - No shared variables between test cases
 - Don't mock internal domain objects (Style, Map, Transform, Dispatcher)
 - One return value or side effect per test - pull shared logic into functions
@@ -152,21 +148,15 @@ debug/             # Debug pages served by `npm start`
 ## Documentation Conventions
 
 - All public API must have JSDoc comments; private items tagged with `@private`
-- Use markdown in JSDoc; surround code identifiers with \`backticks\`
-- Class descriptions: describe what the class/instances *are* (e.g., "A layer that...")
-- Function descriptions: start with third-person verb (e.g., "Sets...", "Returns...")
-- Event descriptions: start with "Fired when..."
-- Style-spec `doc` fields in `v8.json` render verbatim in the public API reference — use unambiguous language, avoid internal terms, and don't reference implementation details
+- Style-spec `doc` fields in `v8.json` are public — use unambiguous language, avoid internal terms, and don't reference implementation details
 - When adding a new property to `v8.json`, populate the `sdk-support` table and set `experimental: true` until release version is confirmed
 
 ## WebGL and Shaders
 
-- Custom `#pragma mapbox` directives in shaders expand to uniforms or attributes
-- Shader programs are dynamically generated based on style properties
-- Data-driven styling creates paint vertex arrays at layout time
-- See [src/shaders/README.md](src/shaders/README.md) for shader documentation
+- Custom `#pragma mapbox` directives in shaders expand to uniforms or attributes based on style properties
 - Use named `#define` constants for integer mode values in shaders — never bare magic numbers like `if (u_blend_mode == 1)`
 - Use `#if defined(A) && defined(B)` for compound shader conditionals (not `#ifdef`); required for the Metal preprocessing pipeline
+- See [src/shaders/README.md](src/shaders/README.md) for shader documentation
 
 ## Performance
 
