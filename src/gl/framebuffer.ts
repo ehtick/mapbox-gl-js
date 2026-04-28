@@ -10,6 +10,7 @@ class Framebuffer {
     context: Context;
     width: number;
     height: number;
+    format: TextureFormat;
     framebuffer: WebGLFramebuffer;
     colorAttachment0: ColorAttachment;
     colorAttachment1: ColorAttachment;
@@ -65,11 +66,12 @@ class Framebuffer {
             existingFbo.destroy();
         }
 
-        const format: TextureFormat = context.extRenderToTextureHalfFloat ? context.gl.RGBA16F : context.gl.RGBA8;
+        const format: TextureFormat = (context.extRenderToTextureHalfFloat || context.extColorBufferFloat) ? context.gl.RGBA16F : context.gl.RGBA8;
         const texture = new Texture(context, {width, height, data: null}, format);
         texture.bind(gl.LINEAR, gl.CLAMP_TO_EDGE);
 
         const fbo = context.createFramebuffer(width, height, 1, null);
+        fbo.format = format;
         fbo.colorAttachment0.set(texture.texture);
 
         if (attachStencil) {

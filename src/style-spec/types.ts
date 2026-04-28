@@ -759,7 +759,11 @@ export type LineLayerSpecification = {
         /**
          * @experimental This property is experimental and subject to change in future versions.
          */
-        "line-blend-mode"?: PropertyValueSpecification<"default" | "multiply" | "additive">
+        "line-blend-mode"?: PropertyValueSpecification<"default" | "multiply" | "additive">,
+        /**
+         * @experimental This property is experimental and subject to change in future versions.
+         */
+        "line-blend-additive-clamp"?: PropertyValueSpecification<number>
     },
     /**
      * @experimental This property is experimental and subject to change in future versions.

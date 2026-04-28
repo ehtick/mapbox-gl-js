@@ -1,6 +1,7 @@
-uniform sampler2D u_image;
+uniform highp sampler2D u_image;
 uniform float u_opacity;
 uniform int u_blend_mode;
+uniform highp float u_max_density;
 in vec2 v_pos;
 
 #define ADDITIVE 1
@@ -15,11 +16,36 @@ void main() {
             discard;
         }
 
-        // Reinhard tone mapping on accumulated density
-        float density = color.a;
+        // The FBO accumulates coverage-weighted colour and unbounded density:
+        //   RGB: SRC_ALPHA * src + dst  →  sum of (opacity * color) per line
+        //   Alpha: ONE * src + ONE * dst  →  sum of per-line opacities (density)
+        //
+        // Recover the average line colour by dividing out the accumulated alpha.
+        highp float density = color.a;
         vec3 avgColor = color.rgb / max(density, 0.001);
-        float t = density / (1.0 + density);
-        glFragColor = vec4(avgColor * t * u_opacity, t * u_opacity);
+
+        // Normalise density against the anchor value and apply a smooth power
+        // curve that never hard-saturates:
+        //
+        //   n = density / u_max_density
+        //   t = (n / (n + 1)) ^ 0.5
+        //
+        // Unlike the previous Reinhard × 2 approach, this curve asymptotically
+        // approaches 1.0 rather than clamping to it — so the full density range
+        // always expresses visible variation regardless of dataset size:
+        //
+        //   n = 0.25  →  t ≈ 0.45   (sparse)
+        //   n = 1.00  →  t ≈ 0.71   (at anchor)
+        //   n = 4.00  →  t ≈ 0.89   (dense)
+        //   n = 100   →  t ≈ 0.99   (very dense, never fully clips)
+        //
+        // This means the exact value of u_max_density matters much less —
+        // shifting it by a constant factor just slides the curve along the
+        // density axis without crushing the contrast at the top end.
+        highp float n = density / max(u_max_density, 0.001);
+        highp float t = sqrt(n / (n + 1.0));
+
+        glFragColor = vec4(avgColor * t, t);
     } else {
         // Multiply mode: the FBO is cleared to opaque white (1,1,1,1) and each
         // line fragment outputs its per-pixel multiply factor. The FBO accumulates

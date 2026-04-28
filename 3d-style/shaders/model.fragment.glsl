@@ -283,7 +283,7 @@ Material getPBRMaterial() {
     mat.metallic = v_roughness_metallic_emissive_alpha.y;
     mat.baseColor.w *= v_roughness_metallic_emissive_alpha.w;
 #endif
-#if defined(HAS_TEXTURE_u_metallicRoughnessTexture) && defined(HAS_ATTRIBUTE_a_uv_2f) 
+#if defined(HAS_TEXTURE_u_metallicRoughnessTexture) && defined(HAS_ATTRIBUTE_a_uv_2f)
     vec4 mrSample = texture(u_metallicRoughnessTexture, uv_2f);
     mat.perceptualRoughness *= mrSample.g;
     mat.metallic *= mrSample.b;

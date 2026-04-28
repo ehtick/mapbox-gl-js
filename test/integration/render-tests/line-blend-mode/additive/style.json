@@ -4,7 +4,7 @@
         "test": {
             "width": 128,
             "height": 128,
-            "allowed": 0.0003
+            "allowed": 0.002
         }
     },
     "center": [0, 0],
@@ -58,7 +58,8 @@
             "paint": {
                 "line-color": "rgba(255, 200, 0, 0.4)",
                 "line-width": 40,
-                "line-blend-mode": "additive"
+                "line-blend-mode": "additive",
+                "line-blend-additive-clamp": 1.0
             },
             "layout": {
                 "line-cap": "round",

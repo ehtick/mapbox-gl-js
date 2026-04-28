@@ -8982,6 +8982,26 @@
         ]
       },
       "property-type": "data-constant"
+    },
+    "line-blend-additive-clamp": {
+      "type": "number",
+      "default": 0,
+      "minimum": 0,
+      "doc": "Controls the brightness of lines in additive blend mode. When set to 0 (the default), brightness is adjusted automatically based on the density of lines visible on screen. Increase this value if the lines appear too bright, or decrease it if they appear too faint.",
+      "experimental": true,
+      "private": true,
+      "sdk-support": {
+        "basic functionality": {
+          "js": "3.21.0"
+        }
+      },
+      "expression": {
+        "interpolated": true,
+        "parameters": [
+          "zoom"
+        ]
+      },
+      "property-type": "data-constant"
     }
   },
   "paint_circle": {

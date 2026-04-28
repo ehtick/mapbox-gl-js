@@ -77,6 +77,8 @@ class Context {
     // eslint-disable-next-line camelcase
     extRenderToTextureHalfFloat: EXT_color_buffer_half_float;
     // eslint-disable-next-line camelcase
+    extColorBufferFloat: EXT_color_buffer_float;
+    // eslint-disable-next-line camelcase
     extDebugRendererInfo: WEBGL_debug_renderer_info;
     extTimerQuery: {
         /* EXT_disjoint_timer_query is not yet available as a TypeScript type */
@@ -159,6 +161,7 @@ class Context {
             this.extTextureFloatLinear = gl.getExtension('OES_texture_float_linear');
         }
         this.extRenderToTextureHalfFloat = gl.getExtension('EXT_color_buffer_half_float');
+        this.extColorBufferFloat = gl.getExtension('EXT_color_buffer_float');
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         this.extTimerQuery = gl.getExtension('EXT_disjoint_timer_query_webgl2');

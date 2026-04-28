@@ -195,6 +195,28 @@ void main() {
 
     out_color *= (alpha * diluted_opacity);
 
+#ifdef INDICATOR_CUTOUT
+    out_color = applyCutout(out_color, v_z_offset);
+#endif
+#ifdef FEATURE_CUTOUT
+    out_color = apply_feature_cutout(out_color, gl_FragCoord, cutout_factors.x);
+#endif
+
+#ifdef LINE_BLEND_ADDITIVE
+    // In additive blend mode the FBO uses ColorMode.additiveAlphaWeighted ([SRC_ALPHA, ONE, ...]).
+    // out_color is fully premultiplied: rgb = C*fa*cov, a = fa*cov
+    // (fa = feature colour alpha, cov = AA coverage * opacity).
+    //
+    // coverage is then SRC_ALPHA weight, and C*fa (feature-premultiplied colour) is the value.
+    //
+    // Output rgb = color.rgb (= C*fa, before coverage was applied) and alpha = cov
+    {
+        float cov = alpha * diluted_opacity;
+        // color.rgb is the feature-alpha-premultiplied colour before coverage scaling.
+        // Recover it by dividing out the coverage factor, so the blend mode can apply it correctly.
+        glFragColor = vec4(cov > 0.0 ? out_color.rgb / cov : vec3(0.0), cov);
+    }
+#else
 #ifdef LINE_BLEND_MULTIPLY
     // In multiply blend mode the FBO accumulates per-line multiply factors using
     // ColorMode.multiply ([DST_COLOR, ZERO]).  Each fragment must therefore output
@@ -205,18 +227,10 @@ void main() {
     //   factor.rgb = out_color.rgb + (1.0 - out_color.a)
     // Output alpha=1 so the DST_COLOR blend sees a solid factor with no alpha scaling.
     glFragColor = vec4(out_color.rgb + (1.0 - out_color.a), 1.0);
-    HANDLE_WIREFRAME_DEBUG;
-    return;
-#endif
-
-#ifdef INDICATOR_CUTOUT
-    out_color = applyCutout(out_color, v_z_offset);
-#endif
-#ifdef FEATURE_CUTOUT
-    out_color = apply_feature_cutout(out_color, gl_FragCoord, cutout_factors.x);
-#endif
-
+#else
     glFragColor = out_color;
+#endif
+#endif
 #ifdef DUAL_SOURCE_BLENDING
     glFragColorSrc1 = vec4(vec3(0.0), emissive_strength);
 #else

@@ -19,12 +19,13 @@ import type {LayerSpecification} from '../../style-spec/types';
 import type {TilespaceQueryGeometry} from '../query_geometry';
 import type {VectorTileFeature} from '@mapbox/vector-tile';
 import type {CreateProgramParams} from '../../render/painter';
+import type {Map as MapboxMap} from '../../ui/map';
 import type {DynamicDefinesType} from '../../render/program/program_uniforms';
 import type SourceCache from '../../source/source_cache';
 import type {LUT} from "../../util/lut";
 import type {ImageId} from '../../style-spec/expression/types/image_id';
 import type {ProgramName} from '../../render/program';
-import type Framebuffer from '../../gl/framebuffer';
+import type {LineBlendDensityReadback, LineBlendFbos} from '../../render/draw_line';
 
 let properties: {
     layout: Properties<LayoutProps>;
@@ -101,11 +102,9 @@ class LineStyleLayer extends StyleLayer {
     override _transitioningPaint: Transitioning<PaintProps>;
     override paint: PossiblyEvaluated<PaintProps>;
 
-    lineBlendFbo: Framebuffer | null | undefined;
-    lineBlendStencil: WebGLRenderbuffer | null | undefined;
-
-    lineBlendDrapeFbo: Framebuffer | null | undefined;
-    lineBlendDrapeStencil: WebGLRenderbuffer | null | undefined;
+    lineBlendFbos: LineBlendFbos | null;
+    // Async GPU readback state for additive-mode density normalisation.
+    lineBlendDensityReadback: LineBlendDensityReadback | null;
 
     constructor(layer: LayerSpecification, scope: string, lut: LUT | null, options?: ConfigOptions | null) {
         const properties = getProperties();
@@ -116,6 +115,8 @@ class LineStyleLayer extends StyleLayer {
         this.gradientVersion = 0;
         this.hasElevatedBuckets = false;
         this.hasNonElevatedBuckets = false;
+        this.lineBlendFbos = null;
+        this.lineBlendDensityReadback = null;
     }
 
     override _handleSpecialPaintPropertyUpdate(name: string) {
@@ -237,22 +238,25 @@ class LineStyleLayer extends StyleLayer {
         this._destroyLineBlendFbo();
     }
 
+    override onRemove(map: MapboxMap) {
+        const gl = map.painter && map.painter.context && map.painter.context.gl;
+        this._destroyLineBlendFbo(gl || undefined);
+    }
+
     override _clear() {
         this._destroyLineBlendFbo();
     }
 
-    _destroyLineBlendFbo() {
-        if (this.lineBlendFbo) {
-            this.lineBlendFbo.destroy();
-            this.lineBlendFbo = null;
+    _destroyLineBlendFbo(gl?: WebGL2RenderingContext) {
+        if (this.lineBlendFbos) {
+            this.lineBlendFbos.destroy();
+            this.lineBlendFbos = null;
         }
-        this.lineBlendStencil = null;
 
-        if (this.lineBlendDrapeFbo) {
-            this.lineBlendDrapeFbo.destroy();
-            this.lineBlendDrapeFbo = null;
+        if (gl && this.lineBlendDensityReadback) {
+            this.lineBlendDensityReadback.destroy(gl);
         }
-        this.lineBlendDrapeStencil = null;
+        this.lineBlendDensityReadback = null;
     }
 }
 
