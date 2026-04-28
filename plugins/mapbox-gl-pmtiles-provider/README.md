@@ -21,4 +21,4 @@ npm run build
 ./publish_cdn.sh            # Requires AWS credentials
 ```
 
-Uploads to `http://api.mapbox.com/mapbox-gl-js/mapbox-gl-pmtiles-provider-v{version}.js` with immutable cache headers.
+Uploads to `https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-pmtiles-provider/v{version}/mapbox-gl-pmtiles-provider.js` with immutable cache headers.

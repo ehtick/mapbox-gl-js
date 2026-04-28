@@ -29,7 +29,7 @@
         const accessToken = getAccessToken();
         mapboxgl.accessToken = accessToken;
 
-        mapboxgl.addTileProvider('pmtiles', new URL('../packages/pmtiles-provider/dist/mapbox-gl-pmtiles-provider.js', import.meta.url).href);
+        mapboxgl.addTileProvider('pmtiles', new URL('../plugins/mapbox-gl-pmtiles-provider/dist/mapbox-gl-pmtiles-provider.js', import.meta.url).href);
 
         const style = await fetch(`https://api.mapbox.com/styles/v1/mapbox/standard-satellite?access_token=${accessToken}`)
             .then(response => response.json())

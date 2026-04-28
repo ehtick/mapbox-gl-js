@@ -345,7 +345,7 @@ export default tseslint.config(
             'eslint.config.js',
             'src/style-spec/test.js',
             'src/style-spec/rollup.config.js',
-            'packages/pmtiles-provider/rollup.config.ts',
+            'plugins/mapbox-gl-pmtiles-provider/rollup.config.ts',
         ],
 
         rules: {

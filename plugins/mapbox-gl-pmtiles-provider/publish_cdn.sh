@@ -9,7 +9,7 @@ set -e
 
 version=$(node -p "require('./package.json').version")
 dist="dist"
-s3_prefix="s3://mapbox-gl-js/mapbox-gl-pmtiles-provider-v${version}"
+s3_prefix="s3://mapbox-gl-js/plugins/mapbox-gl-pmtiles-provider/v${version}/mapbox-gl-pmtiles-provider"
 cache="public, max-age=31536000, immutable"
 
 if [ "$1" != "--dry-run" ]; then

@@ -44,7 +44,7 @@
     "./test/**/*",
     "./build/**/*",
     "./3d-style/**/*",
-    "./packages/**/*",
+    "./plugins/**/*",
     "./modules/**/*",
     "./internal/**/*",
     "./*.config.*"
@@ -62,7 +62,7 @@
     "./test/build/webpack/**/*",
     "./test/build/typings/**/*",
     "./test/build/style-spec.test.js",
-    "./packages/pmtiles-provider/dist",
+    "./plugins/mapbox-gl-pmtiles-provider/dist",
     "./test/build/browserify-test-fixture.js"
   ]
 }

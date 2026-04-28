@@ -26,7 +26,7 @@
   },
   "workspaces": [
     "src/style-spec",
-    "packages/pmtiles-provider",
+    "plugins/mapbox-gl-pmtiles-provider",
     "test/build/vite",
     "test/build/webpack",
     "test/build/typings"
@@ -141,8 +141,8 @@
     "build-all": "run-p build-umd build-esm-dev build-esm-prod build-csp",
     "build-umd": "run-s build-dev build-prod",
     "build-csp": "rollup -c rollup.config.csp.ts",
-    "build-pmtiles": "npm run build -w packages/pmtiles-provider",
-    "watch-pmtiles": "npm run watch -w packages/pmtiles-provider",
+    "build-pmtiles": "npm run build -w plugins/mapbox-gl-pmtiles-provider",
+    "watch-pmtiles": "npm run watch -w plugins/mapbox-gl-pmtiles-provider",
     "build-css": "postcss -o dist/mapbox-gl.css src/css/mapbox-gl.css",
     "build-style-spec": "npm run build --workspace src/style-spec && mkdir -p dist/style-spec && cp src/style-spec/dist/* dist/style-spec",
     "build-dts": "dts-bundle-generator --no-banner --export-referenced-types=false --umd-module-name=mapboxgl -o ./dist/mapbox-gl.d.ts ./src/index.ts",
