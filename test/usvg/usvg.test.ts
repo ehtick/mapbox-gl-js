@@ -87,11 +87,12 @@ describe('uSVG', async () => {
                     });
 
                     const actualImageData = renderIcon(icon, {sx: scale, sy: scale, params: {}});
+                    const {width, height, data} = actualImageData;
 
                     // align canvas sizes with the image size
-                    diffCanvas.width = actualCanvas.width = expectedCanvas.width = actualImageData.width;
-                    diffCanvas.height = actualCanvas.height = expectedCanvas.height = actualImageData.height;
-                    page.viewport(actualImageData.width * 3, actualImageData.height);
+                    diffCanvas.width = actualCanvas.width = expectedCanvas.width = width;
+                    diffCanvas.height = actualCanvas.height = expectedCanvas.height = height;
+                    page.viewport(width * 3, height);
 
                     actualContext.putImageData(actualImageData, 0, 0);
 
@@ -107,20 +108,15 @@ describe('uSVG', async () => {
                     const expectedImageData = expectedContext.getImageData(0, 0, expectedCanvas.width, expectedCanvas.height);
 
                     // Compare images
-                    diffCanvas.width = actualImageData.width;
-                    diffCanvas.height = actualImageData.height;
+                    diffCanvas.width = width;
+                    diffCanvas.height = height;
                     const diffImageData = diffContext.createImageData(diffCanvas.width, diffCanvas.height);
 
-                    const threshold = 0.2;
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-                    const diff = pixelmatch(
-                        actualImageData.data,
-                        expectedImageData.data,
-                        diffImageData.data,
-                        actualImageData.width,
-                        actualImageData.height,
-                        {threshold}
-                    ) / (actualImageData.width * actualImageData.height);
+                    const options = {
+                        threshold: 0.2,
+                        checkerboard: false
+                    };
+                    const diff = pixelmatch(data, expectedImageData.data, diffImageData.data, width, height, options) / (width * height);
 
                     diffs[name] = diff;
                     diffContext.putImageData(diffImageData, 0, 0);

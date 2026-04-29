@@ -280,7 +280,11 @@ export function calculateDiff(actualImageData, expectedImages, {w, h}, threshold
 
         // 4. Use pixelmatch to compare actual and expected images and write diff
         // all inputs must be Uint8Array or Uint8ClampedArray
-        const currentDiff = pixelmatch(actualImageData, expectedImages[i].data, diffImage, w, h, {threshold}) / (w * h);
+        const options = {
+            threshold,
+            checkerboard: false
+        };
+        const currentDiff = pixelmatch(actualImageData, expectedImages[i].data, diffImage, w, h, options) / (w * h);
         if (currentDiff < minDiff) {
             minDiff = currentDiff;
             minDiffImage = diffImage;

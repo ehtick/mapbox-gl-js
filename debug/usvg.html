@@ -91,8 +91,9 @@
             actualContext.clearRect(0, 0, actualCanvas.width, actualCanvas.height);
 
             const imageData = renderIcon(icon, {sx: 2, sy: 2});
-            actualCanvas.width = imageData.width;
-            actualCanvas.height = imageData.height;
+            const {width, height, data} = imageData;
+            actualCanvas.width = width;
+            actualCanvas.height = height;
             actualContext.putImageData(imageData, 0, 0);
 
             const expectedImage = document.getElementById('expected');
@@ -117,8 +118,8 @@
                 });
 
             const diffCanvas = document.getElementById('diff');
-            diffCanvas.width = imageData.width;
-            diffCanvas.height = imageData.height;
+            diffCanvas.width = width;
+            diffCanvas.height = height;
             const diffContext = diffCanvas.getContext('2d');
             diffContext.clearRect(0, 0, diffCanvas.width, diffCanvas.height);
 
@@ -126,8 +127,11 @@
             const diffImageData = diffContext.createImageData(diffCanvas.width, diffCanvas.height);
 
             try {
-                const threshold = 0.3;
-                const diff = pixelmatch(imageData.data, expectedImageData.data, diffImageData.data, imageData.width, imageData.height, {threshold}) / (imageData.width * imageData.height);
+                const options = {
+                    threshold: 0.3,
+                    checkerboard: false
+                };
+                const diff = pixelmatch(data, expectedImageData.data, diffImageData.data, width, height, options) / (width * height);
                 diffContext.putImageData(diffImageData, 0, 0);
 
                 const passed = diff <= 0.0002;
