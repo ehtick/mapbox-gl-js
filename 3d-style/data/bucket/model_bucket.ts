@@ -12,7 +12,6 @@ import {tileToMeter} from '../../../src/geo/mercator_coordinate';
 import {instanceAttributes} from '../model_attributes';
 import {regionsEquals, transformPointToTile, pointInFootprint, skipClipping} from '../../../3d-style/source/replacement_source';
 import {LayerTypeMask} from '../../../3d-style/util/conflation';
-import {isValidUrl} from '../../../src/style-spec/validate/validate_model';
 import {type FeatureState, type GlobalProperties} from '../../../src/style-spec/expression/index';
 import Point from '@mapbox/point-geometry';
 import {ElevationFeatures, type ElevationFeature} from '../../elevation/elevation_feature';
@@ -465,18 +464,8 @@ class ModelBucket implements Bucket {
             warnOnce(`modelId is not evaluated for layer ${layer.id} and it is not going to get rendered.`);
             return modelId;
         }
-        // check if it's a valid model (absolute) URL
-        if (isValidUrl(modelId, false)) {
-            if (!this.modelUris.includes(modelId)) {
-                this.modelUris.push(modelId);
-            }
-        } else {
-            // Check if it's a style model
-            if (this.styleDefinedModelURLs[modelId] !== undefined) {
-                if (!this.modelUris.includes(modelId)) {
-                    this.modelUris.push(modelId);
-                }
-            }
+        if ((modelId.includes('://') || this.styleDefinedModelURLs[modelId]) && !this.modelUris.includes(modelId)) {
+            this.modelUris.push(modelId);
         }
         if (!this.instancesPerModel[modelId]) {
             this.instancesPerModel[modelId] = new PerModelAttributes();
