@@ -24,7 +24,6 @@ import type {ConfigOptions} from '../types/config_options';
 class ParsingContext {
     registry: ExpressionRegistry;
     path: Array<number | string>;
-    key: string;
     scope: Scope;
     errors: Array<ParsingError>;
     _scope: string | null | undefined;
@@ -36,6 +35,9 @@ class ParsingContext {
     // check that the output type of the parsed expression matches
     // `expectedType`.
     expectedType: Type | null | undefined;
+
+    // `key` is only consulted on the error path, so compute it lazily.
+    private _key: string | undefined;
 
     constructor(
         registry: ExpressionRegistry,
@@ -49,13 +51,25 @@ class ParsingContext {
     ) {
         this.registry = registry;
         this.path = path;
-        this.key = path.map(part => { if (typeof part === 'string') { return `['${part}']`; } return `[${part}]`; }).join('');
         this.scope = scope;
         this.errors = errors;
         this.expectedType = expectedType;
         this._scope = _scope;
         this.options = options;
         this.iconImageUseTheme = iconImageUseTheme;
+    }
+
+    get key(): string {
+        if (this._key === undefined) {
+            const path = this.path;
+            let key = '';
+            for (let i = 0; i < path.length; i++) {
+                const part = path[i];
+                key += typeof part === 'string' ? `['${part}']` : `[${part}]`;
+            }
+            this._key = key;
+        }
+        return this._key;
     }
 
     /**
@@ -226,9 +240,9 @@ class ParsingContext {
      * Returns null if `t` is a subtype of `expected`; otherwise returns an
      * error message and also pushes it to `this.errors`.
      */
-    checkSubtype(expected: Type, t: Type): string | null | undefined {
+    checkSubtype(expected: Type, t: Type, index?: number): string | null | undefined {
         const error = checkSubtype(expected, t);
-        if (error) this.error(error);
+        if (error) this.error(error, ...(typeof index === 'number' ? [index] : []));
         return error;
     }
 }
