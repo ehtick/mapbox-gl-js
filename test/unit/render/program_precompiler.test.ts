@@ -50,7 +50,8 @@ function createPainter(overrides = {}) {
             gl: {flush: () => { flushCalls.count++; }},
             sweepPendingPrograms: () => { sweepCalls.count++; },
             // Default mock is KHR-present; tests that exercise the no-KHR fallback override this.
-            extParallelShaderCompile: {}
+            extParallelShaderCompile: {},
+            _pendingPrograms: new Set()
         },
         getShaderSource: () => null,
         getOrCreateProgram(name, params) {
@@ -298,7 +299,8 @@ test('_executeBatch flushes after no-KHR batches too (driver-side native JIT may
         context: {
             gl: {flush: () => { painter.flushCalls.count++; }},
             sweepPendingPrograms: () => {},
-            extParallelShaderCompile: null
+            extParallelShaderCompile: null,
+            _pendingPrograms: new Set()
         }
     });
     // Plenty of time, queue drains — flush regardless of KHR availability so deferred GPU work
@@ -320,7 +322,8 @@ test('_executeBatch uses larger margin without KHR_parallel_shader_compile', () 
         context: {
             gl: {flush: () => { painter.flushCalls.count++; }},
             sweepPendingPrograms: () => {},
-            extParallelShaderCompile: null
+            extParallelShaderCompile: null,
+            _pendingPrograms: new Set()
         }
     });
     // timeRemaining at the KHR margin (5 ms) is well below the no-KHR margin (25 ms),
@@ -423,6 +426,23 @@ test('_executeBatch clears _idleHandle when it drains the queue', () => {
     expect(pp._queue.length).toBe(0);
     expect(pp._idleHandle).toBe(null);
     expect(idleSpy).not.toHaveBeenCalled();
+});
+
+test('_executeBatch keeps rescheduling for sweep while pending programs remain after queue empties', () => {
+    const pp = new ProgramPrecompiler();
+    pp._queue.push({programId: 'fill', params: {overrideFog: false, overrideRtt: false}});
+
+    // Simulate a not-yet-finalized program from a previous batch's KHR compile.
+    const painter = createPainter();
+    painter.context._pendingPrograms.add({maybeFinalize: () => {}});
+
+    idleSpy.mockImplementation(() => 99);
+    pp._executeBatch({didTimeout: false, timeRemaining: () => 50}, painter, createStyle());
+
+    // Queue drained, but pending is non-empty — should reschedule for a sweep-only slice.
+    expect(pp._queue.length).toBe(0);
+    expect(pp._idleHandle).toBe(99);
+    expect(idleSpy).toHaveBeenCalledOnce();
 });
 
 test('_executeBatch sets painter.style, fogVisible, and param overrides per task', () => {

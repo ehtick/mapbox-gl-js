@@ -235,7 +235,14 @@ export class ProgramPrecompiler {
             painter.context.gl.flush();
         }
 
-        if (this._queue.length > 0) {
+        // Keep scheduling while either the queue has work or programs are pending finalization.
+        // After the queue empties, the last batch's KHR compiles may still be in flight; without
+        // continued sweeping they'd sit in `_pendingPrograms` until the next render call, causing
+        // a one-time stall on first interaction after a long idle. `maybeFinalize` is gated on
+        // `COMPLETION_STATUS_KHR`, so additional slices are cheap if compiles aren't ready yet.
+        // No-KHR path: `_pendingPrograms` is always empty (constructor finalizes synchronously),
+        // so this reduces to the original `_queue.length > 0` check.
+        if (this._queue.length > 0 || painter.context._pendingPrograms.size > 0) {
             this._idleHandle = browser.requestIdleCallback((d) => this._executeBatch(d, painter, style));
         } else {
             this._idleHandle = null;
