@@ -1,5 +1,5 @@
 import assert from 'assert';
-import Grid from 'grid-index';
+import Grid from '../symbol/grid_index';
 import Color from '../style-spec/util/color';
 import Point from '@mapbox/point-geometry';
 import {StylePropertyFunction, StyleExpression, ZoomDependentExpression, ZoomConstantExpression} from '../style-spec/expression/index';
@@ -12,7 +12,6 @@ import {ImageId} from '../style-spec/expression/types/image_id';
 import {ImageVariant} from '../style-spec/expression/types/image_variant';
 
 import type {Class} from '../types/class';
-import type {GridIndex} from '../types/grid-index';
 import type {Transferable} from '../types/transferable';
 
 type SerializedObject = {
@@ -80,27 +79,6 @@ export function register<T extends Class<unknown>>(klass: T, name: string, optio
 }
 
 register(Object, 'Object');
-
-type SerializedGrid = {
-    buffer: ArrayBuffer;
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-Grid.serialize = function serialize(grid: GridIndex, transferables?: Set<Transferable>): SerializedGrid {
-    const buffer = grid.toArrayBuffer();
-    if (transferables) {
-        transferables.add(buffer);
-    }
-    return {buffer};
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-Grid.deserialize = function deserialize(serialized: SerializedGrid): GridIndex {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    return new Grid(serialized.buffer) as GridIndex;
-};
-
-Object.defineProperty(Grid, 'name', {value: 'Grid'});
 
 register(Grid as Class<Grid>, 'Grid');
 

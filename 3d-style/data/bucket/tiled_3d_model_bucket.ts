@@ -26,7 +26,7 @@ import type Painter from '../../../src/render/painter';
 import type {vec4} from 'gl-matrix';
 import type {Terrain} from '../../../src/terrain/terrain';
 import type FeatureIndex from '../../../src/data/feature_index';
-import type {GridIndex} from '../../../src/types/grid-index';
+import type GridIndex from '../../../src/symbol/grid_index';
 import type {TileFootprint} from '../../../3d-style/util/conflation';
 import type {FeatureStates} from '../../../src/source/source_state';
 import type {FeatureState, GlobalProperties} from '../../../src/style-spec/expression/index';

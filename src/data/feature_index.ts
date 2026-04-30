@@ -2,7 +2,7 @@ import loadGeometry from './load_geometry';
 import toEvaluationFeature from './evaluation_feature';
 import EvaluationParameters from '../style/evaluation_parameters';
 import EXTENT from '../style-spec/data/extent';
-import Grid from 'grid-index';
+import Grid from '../symbol/grid_index';
 import DictionaryCoder from '../util/dictionary_coder';
 import {VectorTile} from '@mapbox/vector-tile';
 import Protobuf from 'pbf';
@@ -27,7 +27,6 @@ import type {TilespaceQueryGeometry} from '../style/query_geometry';
 import type {FeatureIndex as FeatureIndexStruct} from './array_types';
 import type {TileTransform} from '../geo/projection/tile_transform';
 import type {VectorTileLayer, VectorTileFeature} from '@mapbox/vector-tile';
-import type {GridIndex} from '../types/grid-index';
 import type {FeatureState, StyleExpression} from '../style-spec/expression/index';
 import type {FeatureVariant} from '../util/vectortile_to_geojson';
 import type {ImageId} from '../style-spec/expression/types/image_id';
@@ -58,7 +57,7 @@ class FeatureIndex {
     x: number;
     y: number;
     z: number;
-    grid: GridIndex;
+    grid: Grid;
     featureIndexArray: FeatureIndexArray;
     promoteId?: PromoteIdSpecification;
     promoteIdExpression?: StyleExpression;
@@ -77,8 +76,7 @@ class FeatureIndex {
         this.x = tileID.canonical.x;
         this.y = tileID.canonical.y;
         this.z = tileID.canonical.z;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-        this.grid = new Grid(EXTENT, 16, 0);
+        this.grid = new Grid(EXTENT, EXTENT, EXTENT / 16);
         this.featureIndexArray = new FeatureIndexArray();
         this.promoteId = promoteId;
         this.is3DTile = false;
@@ -146,7 +144,7 @@ class FeatureIndex {
             return isects;
         };
 
-        const matching = this.grid.query(bounds.min.x, bounds.min.y, bounds.max.x, bounds.max.y, queryPredicate);
+        const matching = this.grid.queryKeys(bounds.min.x, bounds.min.y, bounds.max.x, bounds.max.y, queryPredicate);
         matching.sort(topDownFeatureComparator);
 
         let elevationHelper = null;

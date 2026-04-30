@@ -52,6 +52,8 @@ type ScreenAnchorPoint = {
 // stability, but it's expensive.
 const viewportPadding = 100;
 
+type CollisionKey = {bucketInstanceId: number; featureIndex: number; collisionGroupID: number};
+
 /**
  * A collision index used to prevent symbols from overlapping. It keep tracks of
  * where previous symbols have been placed and is used to check if a new
@@ -65,8 +67,8 @@ const viewportPadding = 100;
  * @private
  */
 class CollisionIndex {
-    grid: Grid;
-    ignoredGrid: Grid;
+    grid: Grid<CollisionKey>;
+    ignoredGrid: Grid<CollisionKey>;
     transform: Transform;
     pitchfactor: number;
     screenRightBoundary: number;
@@ -81,8 +83,8 @@ class CollisionIndex {
     constructor(
         transform: Transform,
         fogState?: FogState | null,
-        grid: Grid = new Grid(transform.width + 2 * viewportPadding, transform.height + 2 * viewportPadding, 25),
-        ignoredGrid: Grid = new Grid(transform.width + 2 * viewportPadding, transform.height + 2 * viewportPadding, 25)
+        grid: Grid<CollisionKey> = new Grid<CollisionKey>(transform.width + 2 * viewportPadding, transform.height + 2 * viewportPadding, 25),
+        ignoredGrid: Grid<CollisionKey> = new Grid<CollisionKey>(transform.width + 2 * viewportPadding, transform.height + 2 * viewportPadding, 25)
     ) {
         this.transform = transform;
 
@@ -122,8 +124,7 @@ class CollisionIndex {
         allowOverlap: boolean,
         textPixelRatio: number,
         posMatrix: mat4,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        collisionGroupPredicate?: any,
+        collisionGroupPredicate?: (key: CollisionKey) => boolean,
     ): PlacedCollisionBox {
         assert(!this.transform.elevation || collisionBox.elevation !== undefined);
 
@@ -451,29 +452,21 @@ class CollisionIndex {
         const features = this.grid.query(minX, minY, maxX, maxY)
             .concat(this.ignoredGrid.query(minX, minY, maxX, maxY));
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const seenFeatures: Record<string, any> = {};
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const result: Record<string, any> = {};
+        const seenFeatures: {[bucketInstanceId: number]: {[featureIndex: number]: boolean}} = {};
+        const result: {[bucketInstanceId: number]: Array<number>} = {};
 
         for (const feature of features) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             const featureKey = feature.key;
             // Skip already seen features.
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             if (seenFeatures[featureKey.bucketInstanceId] === undefined) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                 seenFeatures[featureKey.bucketInstanceId] = {};
             }
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             if (seenFeatures[featureKey.bucketInstanceId][featureKey.featureIndex]) {
                 continue;
             }
 
             // Skip symbols hidden by a clip region — they are invisible and should not be queried.
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
             const clippedForBucket = this.clippedSymbols.get(featureKey.bucketInstanceId);
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
             if (clippedForBucket && clippedForBucket.has(featureKey.featureIndex)) {
                 continue;
             }
@@ -493,14 +486,10 @@ class CollisionIndex {
                 continue;
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             seenFeatures[featureKey.bucketInstanceId][featureKey.featureIndex] = true;
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             if (result[featureKey.bucketInstanceId] === undefined) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                 result[featureKey.bucketInstanceId] = [];
             }
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
             result[featureKey.bucketInstanceId].push(featureKey.featureIndex);
         }
 
