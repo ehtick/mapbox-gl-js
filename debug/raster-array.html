@@ -50,9 +50,11 @@
         import {getAccessToken} from './access_token_generated.js';
         import {Pane} from 'https://cdn.jsdelivr.net/npm/tweakpane@4.0.3/dist/tweakpane.min.js';
 
+        const urlParams = new URLSearchParams(window.location.search);
+
         const PARAMS = {
             bandIndex: 0,
-            projection: 'mercator',
+            projection: urlParams.get('projection') || 'globe',
             colorScale: 'Spectral',
         };
 
@@ -90,6 +92,7 @@
             center: [135.0053045734985, 36.00653610439714],
             zoom: 1,
             hash: true,
+            projection: PARAMS.projection,
         });
 
         map.addControl(new mapboxgl.NavigationControl());
@@ -198,6 +201,9 @@
                 }
             }).on('change', (e) => {
                 map.setProjection(e.value);
+                const params = new URLSearchParams(window.location.search);
+                params.set('projection', e.value);
+                window.history.replaceState(null, '', `?${params.toString()}${window.location.hash}`);
             });
             pane.addBinding(PARAMS, 'colorScale', {label: 'Color scale', options: colorScaleOptions})
                 .on('change', (e) => map.setPaintProperty('precipitations', 'raster-color', getRasterColor(e.value)));

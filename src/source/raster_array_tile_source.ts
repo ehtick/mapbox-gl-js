@@ -423,6 +423,8 @@ class RasterArrayTileSource extends RasterTileSource<'raster-array'> {
         const px = point.x - wrap;
         const x = Math.floor(px * tiles);
         const y = Math.floor(point.y * tiles);
+        // Guard for non-Mercator projections that show latitudes beyond the Mercator limit
+        if (x < 0 || x >= tiles || y < 0 || y >= tiles) return null;
         const sourceCache = this.map.style.getSourceCache(this.id);
         const tileID = new OverscaledTileID(z, wrap, z, x, y);
         return sourceCache.findLoadedParent(tileID, this.minzoom) as RasterArrayTile | null | undefined;
