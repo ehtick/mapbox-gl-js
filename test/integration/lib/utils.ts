@@ -87,6 +87,7 @@ const KNOWN_PLATFORM_TAGS = [
     'web-linux-chrome',
     'web-linux-firefox',
     'web-windows-chrome',
+    'native-macos-gl',
     'native-macos-metal',
     'native-macos-vulkan',
     'native-linux-gl',
