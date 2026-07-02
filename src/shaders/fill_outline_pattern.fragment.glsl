@@ -25,6 +25,10 @@ in highp vec4 v_pos_light_view_1;
 in highp float v_depth;
 #endif
 
+#ifdef ELEVATED_ROADS
+in highp float v_road_z_offset;
+#endif
+
 in highp vec2 v_pos;
 in highp vec2 v_pos_world;
 
@@ -82,7 +86,11 @@ void main() {
 #endif // LIGHTING_3D_MODE
 
 #ifdef FEATURE_CUTOUT
-    out_color = apply_feature_cutout(out_color, gl_FragCoord, cutout_factors.x);
+    float z = 0.0;
+#ifdef ELEVATED_ROADS
+    z = v_road_z_offset;
+#endif
+    out_color = apply_feature_cutout(out_color, gl_FragCoord, cutout_factors.x, z);
 #endif
 
 #ifdef FOG
