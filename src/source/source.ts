@@ -147,7 +147,12 @@ export const create = function (
     dispatcher: Dispatcher,
     eventedParent: Evented,
 ): Source {
-    const source = new sourceTypes[specification.type](id, specification, dispatcher, eventedParent) as Source;
+    const SourceType = getType(specification.type);
+    if (!SourceType) {
+        throw new Error(`Unknown source type "${specification.type}"`);
+    }
+
+    const source = new SourceType(id, specification, dispatcher, eventedParent) as Source;
 
     if (source.id !== id) {
         throw new Error(`Expected Source id to be ${id} instead of ${source.id}`);
@@ -157,8 +162,8 @@ export const create = function (
     return source;
 };
 
-export const getType = function (name: string): Class<ISource> {
-    return sourceTypes[name as Source['type']];
+export const getType = function (name: string): Class<ISource> | undefined {
+    return Object.hasOwn(sourceTypes, name) ? sourceTypes[name as Source['type']] : undefined;
 };
 
 export const setType = function (name: string, type: Class<ISource>) {

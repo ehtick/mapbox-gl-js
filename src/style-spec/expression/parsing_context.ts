@@ -144,7 +144,7 @@ class ParsingContext {
                 return this.error(`Expected an array with at least one element. If you wanted a literal array, use ["literal", []].`);
             }
 
-            const Expr = typeof expr[0] === 'string' ? this.registry[expr[0]] : undefined;
+            const Expr = typeof expr[0] === 'string' && Object.hasOwn(this.registry, expr[0]) ? this.registry[expr[0]] : undefined;
             if (Expr) {
                 let parsed = Expr.parse(expr, this);
                 if (!parsed) return null;

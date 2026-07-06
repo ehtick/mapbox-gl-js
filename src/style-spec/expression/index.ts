@@ -164,7 +164,7 @@ export class StyleExpression {
 
 export function isExpression(expression: unknown): boolean {
     return Array.isArray(expression) && expression.length > 0 &&
-        typeof expression[0] === 'string' && expression[0] in definitions;
+        typeof expression[0] === 'string' && Object.hasOwn(definitions, expression[0]);
 }
 
 /**

@@ -627,6 +627,23 @@ describe('Style#addSource', () => {
         expect(() => style.addSource('source-id', source)).toThrowError(/type/i);
     });
 
+    test.each(['toString', 'constructor', 'hasOwnProperty', 'valueOf', '__proto__'])('throw a clean error on unknown source type "%s"', async (type) => {
+        // "toString"/"constructor"/etc resolve through the prototype chain in the
+        // sourceTypes registry, and `builtIns` in Style#addSource
+        // only schema-validates a handful of known types, so anything else -
+        // including these prototype member names - reaches `new sourceTypes[type](...)`
+        // unchecked. That must not throw "sourceTypes.toString is not a constructor".
+        const style = new Style(new StubMap());
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        style.loadJSON(createStyleJSON());
+        await waitFor(style, "style.load");
+
+        const source = createSource();
+        source.type = type;
+
+        expect(() => style.addSource('source-id', source)).toThrowError(/unknown source type/i);
+    });
+
     test('fires "data" event', async () => {
         const style = new Style(new StubMap());
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument

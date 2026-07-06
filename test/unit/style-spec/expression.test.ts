@@ -42,6 +42,18 @@ describe('createPropertyExpression', () => {
     });
 });
 
+describe('createExpression treats inherited Object.prototype member names as unknown operators', () => {
+    // an expression array whose first element is "__proto__"/"constructor"/etc resolves via the prototype chain in the
+    // plain-object expression registry, so it must not be treated as a registered operator
+    test.each(['__proto__', 'constructor', 'toString', 'hasOwnProperty', 'valueOf'])('%s', (name) => {
+        expect(() => createExpression([name])).not.toThrow();
+        const {result, value} = createExpression([name]);
+        expect(result).toEqual('success');
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        expect(value.expression.evaluate({})).toEqual([name]);
+    });
+});
+
 describe('validateExpression', () => {
     //see https://github.com/mapbox/mapbox-gl-js/issues/11457
     test('ensure lack of valueSpec does not cause uncaught error', () => {
