@@ -1261,6 +1261,26 @@ describe("mapbox", () => {
             expect(mapLoadEvent.bundleDistribution).toEqual('other');
         });
 
+        test('drains the second queued event using its own access token, not the first event\'s stale token', async () => {
+            // Simulates two Map instances with different per-Map accessTokens posting
+            // telemetry through the shared MapLoadEvent singleton while a request is in flight.
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+            event.postMapLoadEvent(1, skuToken, 'token-for-map-a', () => {});
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+            event.postMapLoadEvent(2, skuToken, 'token-for-map-b', () => {});
+
+            // Let the first request's promise chain settle, which triggers draining the
+            // second queued event.
+            await new Promise(resolve => { setTimeout(resolve, 0); });
+
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            expect(window.server.requests.length).toEqual(2);
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            expect(window.server.requests[0].url).toContain('access_token=token-for-map-a');
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            expect(window.server.requests[1].url).toContain('access_token=token-for-map-b');
+        });
+
         test('setSdkInfo ignores invalid values', async () => {
             mapbox.setSdkInfo('not a valid value!');
             // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
