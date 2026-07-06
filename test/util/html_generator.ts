@@ -11,7 +11,6 @@ export type TestReportData = {
     height?: number;
     actual?: string;
     expected?: string;
-    expectedPath?: string;
     imgDiff?: string;
     imageThreshold?: number;
     imageThresholdRule?: string;
@@ -20,6 +19,7 @@ export type TestReportData = {
     error?: Error;
     skippedReasons?: string[];
     matchedSkipRules?: string[];
+    matchedExpectedFile?: string;
 };
 
 type DecoratedTestData = TestReportData & {
@@ -70,8 +70,8 @@ const renderResultHTML = compile(`
     <% if (r.status !== 'skipped' && r.minDiff !== undefined) { %>
       <p class="diff"><strong>Diff:</strong> <%= r.minDiff === 0 ? 'none' : r.minDiff %></p>
     <% } %>
-    <% if (r.expectedPath) { %>
-      <p class="diff"><strong>Expected image path:</strong> <%= r.expectedPath %></p>
+    <% if (r.matchedExpectedFile) { %>
+      <p class="diff"><strong>Matched expected file:</strong> <%= r.matchedExpectedFile %></p>
     <% } %>
     <% if (r.jsonDiff) { %>
       <details>
@@ -257,14 +257,16 @@ function escapeHTML(value: string): string {
 
 function decorateTestData(testData: TestReportData): DecoratedTestData {
     const status = testData.status;
+    const attempt = testId.get(testData.name);
+    const domId = attempt ? `${testData.name}-attempt${attempt}` : testData.name;
     const decorated: DecoratedTestData = {
         ...testData,
         color: testData.color || colors[status],
         showImages: shouldShowImages(testData),
-        domId: testData.name,
-        domIdJs: escapeJsString(testData.name),
+        domId,
+        domIdJs: escapeJsString(domId),
         isRenderTest: testData.imageThreshold !== undefined,
-        attempt: testId.get(testData.name),
+        attempt,
     };
     if (testData.error) {
         decorated.errorMessage = escapeHTML(testData.error.stack || testData.error.message || String(testData.error));

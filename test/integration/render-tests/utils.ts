@@ -29,7 +29,6 @@ document.body.appendChild(fakeCanvasContainer);
 
 setupHTML();
 
-export const {canvas: expectedCanvas, ctx: expectedCtx} = createCanvas();
 export const {canvas: diffCanvas, ctx: diffCtx} = createCanvas();
 export const {canvas: actualCanvas, ctx: actualCtx} = createCanvas();
 
@@ -117,33 +116,6 @@ async function setupLayout(options) {
         await drawImage(canvas, ctx, src, false);
         fakeCanvasContainer.appendChild(canvas);
     }
-}
-
-export async function getExpectedImages(currentTestName, currentFixture) {
-    // there may be multiple expected images, covering different platforms
-    const expectedPaths: string[] = [];
-    for (const prop in currentFixture) {
-        if (prop.indexOf('expected') > -1) {
-            const path = `/${currentTestName}/${prop}.png`
-                .split('/')
-                // regression tests with # in the name need to be sanitized
-                .map(p => encodeURIComponent(p))
-                .join('/');
-
-            expectedPaths.push(path);
-        }
-    }
-
-    // if we have multiple expected images, we'll compare against each one and pick the one with
-    // the least amount of difference; this is useful for covering features that render differently
-    // depending on platform, i.e. heatmaps use half-float textures for improved rendering where supported
-    const expectedImages = await Promise.all(expectedPaths.map((path) => drawImage(expectedCanvas, expectedCtx, path)));
-
-    if (import.meta.env.VITE_UPDATE === "false" && expectedImages.length === 0) {
-        throw new Error(`No expected*.png files found for "${currentTestName}"; did you mean to run tests with UPDATE=true?`);
-    }
-
-    return expectedImages;
 }
 
 export async function renderMap(style, options, currentTestName) {
@@ -278,33 +250,19 @@ export function getActualImageDataURL(actualImageData, map, {w, h}, options) {
     return map.getCanvas().toDataURL();
 }
 
-export function calculateDiff(actualImageData, expectedImages, {w, h}, threshold) {
-    // 2. draw expected.png into a canvas and extract ImageData
-    let minImageSrc;
-    let minDiffImage;
-    let expectedIndex = -1;
-    let minDiff = Infinity;
+export function calculateDiff(actualImageData, expectedImageData, {w, h}, threshold) {
+    // set up Uint8ClampedArray to write diff into
+    const diffImage = new Uint8ClampedArray(w * h * 4);
 
-    for (let i = 0; i < expectedImages.length; i++) {
-        // 3. set up Uint8ClampedArray to write diff into
-        const diffImage = new Uint8ClampedArray(w * h * 4);
+    // Use pixelmatch to compare actual and expected images and write diff
+    // all inputs must be Uint8Array or Uint8ClampedArray
+    const options = {
+        threshold,
+        checkerboard: false
+    };
+    const diff = pixelmatch(actualImageData, expectedImageData, diffImage, w, h, options) / (w * h);
 
-        // 4. Use pixelmatch to compare actual and expected images and write diff
-        // all inputs must be Uint8Array or Uint8ClampedArray
-        const options = {
-            threshold,
-            checkerboard: false
-        };
-        const currentDiff = pixelmatch(actualImageData, expectedImages[i].data, diffImage, w, h, options) / (w * h);
-        if (currentDiff < minDiff) {
-            minDiff = currentDiff;
-            minDiffImage = diffImage;
-            expectedIndex = i;
-            minImageSrc = expectedImages[i].src;
-        }
-    }
-
-    return {minDiff, minDiffImage, expectedIndex, minImageSrc};
+    return {diff, diffImage};
 }
 
 export async function getActualImage(style, options, currentTestName) {

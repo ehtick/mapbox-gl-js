@@ -41,22 +41,30 @@ function loadPngFromUrl(url: string): Promise<ImageDataWithCanvas> {
     });
 }
 
-async function getExpectedImages(currentTestName: string, renderTest: Record<string, unknown>): Promise<Array<ImageDataWithCanvas & {src: string}>> {
-    const urls: string[] = [];
-    for (const prop in renderTest) {
-        if (prop.indexOf('expected') > -1) {
-            // Encode each path segment to handle special characters (e.g. '#' in regression test names).
-            const url = `/render-tests/${currentTestName}/${prop}.png`
-                .split('/')
-                .map(encodeURIComponent)
-                .join('/');
-            urls.push(url);
-        }
+// Tries, in order, expected-<full-tag>.png, expected-<tag-with-last-segment-dropped>.png, ...,
+// down to expected-<first-segment>.png, then falls back to the bare expected.png. Returns the
+// first of those property names (set by generate-fixture-json.js for every "expected*.png" file
+// present) that actually exists next to this test's style.json.
+function resolveExpectedImageProp(renderTest: Record<string, unknown>, platformTag: string): string | undefined {
+    const segments = platformTag.split('-');
+    for (let i = segments.length; i > 0; i--) {
+        const candidate = `expected-${segments.slice(0, i).join('-')}`;
+        if (renderTest[candidate]) return candidate;
     }
-    return Promise.all(urls.map(async (url) => {
-        const result = await loadPngFromUrl(url);
-        return Object.assign({}, result, {src: url});
-    }));
+    return renderTest.expected ? 'expected' : undefined;
+}
+
+async function getExpectedImage(currentTestName: string, renderTest: Record<string, unknown>, platformTag: string): Promise<(ImageDataWithCanvas & {src: string, prop: string}) | undefined> {
+    const prop = resolveExpectedImageProp(renderTest, platformTag);
+    if (!prop) return undefined;
+
+    // Encode each path segment to handle special characters (e.g. '#' in regression test names).
+    const url = `/render-tests/${currentTestName}/${prop}.png`
+        .split('/')
+        .map(encodeURIComponent)
+        .join('/');
+    const result = await loadPngFromUrl(url);
+    return Object.assign({}, result, {src: url, prop});
 }
 
 type TestMetadata = {
@@ -71,7 +79,7 @@ type TestMetadata = {
     height?: number;
     actual?: string;
     expected?: string;
-    expectedPath?: string;
+    matchedExpectedFile?: string;
     imgDiff?: string;
     error?: Error;
 }
@@ -90,8 +98,8 @@ const getTest = (renderTestName: string, preflightError?: unknown) => async () =
         const style = parseStyle(renderTest);
         const options = parseOptions(renderTest, style, platformTag);
 
-        const [expectedImages, {actualImageData, w, h}] = await Promise.all([
-            getExpectedImages(renderTestName, renderTest),
+        const [expectedImage, {actualImageData, w, h}] = await Promise.all([
+            getExpectedImage(renderTestName, renderTest, platformTag),
             getActualImage(style, options, renderTestName),
         ]);
 
@@ -101,16 +109,18 @@ const getTest = (renderTestName: string, preflightError?: unknown) => async () =
             await server.commands.writeFile(`${testPath}/actual.png`, actual.split(',')[1], {encoding: 'base64'});
         }
 
-        if (expectedImages.length === 0 && import.meta.env.VITE_UPDATE === 'false') {
-            throw new Error(`No expected images found for ${renderTestName}. Please run the test with UPDATE=true to generate expected images.`);
+        if (!expectedImage && import.meta.env.VITE_UPDATE === 'false') {
+            throw new Error(`No expected image found for ${renderTestName} on platform-tag "${platformTag}". Please run the test with UPDATE=true to generate one.`);
         }
 
-        const {minDiff, minDiffImage, expectedIndex, minImageSrc} = calculateDiff(actualImageData, expectedImages.map(({imageData, src}) => ({data: imageData.data, src})), {w, h}, options['diff-calculation-threshold']);
-        const pass = minDiff <= options.imageThreshold;
+        const {diff, diffImage} = expectedImage
+            ? calculateDiff(actualImageData, expectedImage.imageData.data, {w, h}, options['diff-calculation-threshold'])
+            : {diff: Infinity, diffImage: undefined};
+        const pass = diff <= options.imageThreshold;
         const testMetaData: TestMetadata = {
             name: renderTestName,
             testPath: `${testPath}/style.json`,
-            minDiff: Math.round(100000 * minDiff) / 100000,
+            minDiff: Math.round(100000 * diff) / 100000,
             imageThreshold: options.imageThreshold,
             imageThresholdRule: options.imageThresholdRule,
             width: w,
@@ -118,10 +128,14 @@ const getTest = (renderTestName: string, preflightError?: unknown) => async () =
             status: pass ? 'passed' : 'failed',
         };
 
-        if (minDiffImage && expectedIndex !== -1 && (import.meta.env.VITE_CI === 'false' || !pass)) {
+        if (expectedImage) {
+            testMetaData.matchedExpectedFile = decodeURIComponent(expectedImage.src.split('/').pop() || '');
+        }
+
+        if (diffImage && (import.meta.env.VITE_CI === 'false' || !pass)) {
             diffCanvas.width = w;
             diffCanvas.height = h;
-            const diffImageData = new ImageData(minDiffImage, w, h);
+            const diffImageData = new ImageData(diffImage, w, h);
             diffCtx.putImageData(diffImageData, 0, 0);
 
             const imgDiff = diffCanvas.toDataURL();
@@ -131,15 +145,18 @@ const getTest = (renderTestName: string, preflightError?: unknown) => async () =
             }
 
             testMetaData.actual = actual;
-            testMetaData.expected = expectedImages[expectedIndex].canvas.toDataURL();
-            testMetaData.expectedPath = minImageSrc;
+            testMetaData.expected = expectedImage.canvas.toDataURL();
             testMetaData.imgDiff = imgDiff;
         }
 
         if (!pass && import.meta.env.VITE_UPDATE === 'true') {
-            await server.commands.writeFile(`${testPath}/expected.png`, actual.split(',')[1], {encoding: 'base64'});
+            // Update whichever file was (or would have been) used as the baseline for this
+            // platform-tag, so a subsequent run resolves the freshly-written image instead of
+            // silently preferring a higher-priority expected-<tag>.png that update left untouched.
+            const updateProp = expectedImage ? expectedImage.prop : 'expected';
+            await server.commands.writeFile(`${testPath}/${updateProp}.png`, actual.split(',')[1], {encoding: 'base64'});
         } else if (!pass) {
-            errorMessage = `Render test ${renderTestName} failed with ${minDiff} diff`;
+            errorMessage = `Render test ${renderTestName} failed with ${diff} diff`;
         }
 
         reportFragment = updateHTML(testMetaData);
