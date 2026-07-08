@@ -2,7 +2,9 @@ import Point from '@mapbox/point-geometry';
 import {mat2, mat4, vec3, vec4} from 'gl-matrix';
 import {addDynamicAttributes, updateGlobeVertexNormal} from '../data/bucket/symbol_bucket';
 import {WritingMode} from '../symbol/shaping';
-import {calculateGlobeLabelMatrix} from '../geo/projection/globe_util';
+import {calculateGlobeLabelMatrix, globeToMercatorTransition} from '../geo/projection/globe_util';
+import {mercatorXfromLng, mercatorYfromLat} from '../geo/mercator_coordinate';
+import EXTENT from '../style-spec/data/extent';
 import {degToRad} from '../util/util';
 import {evaluateSizeForFeature, evaluateSizeForZoom} from './symbol_size';
 
@@ -40,6 +42,13 @@ type PlacedGlyph = {
 };
 type ProjectionCache = {
     [_: number]: [number, number, number];
+};
+
+// Pre-computed per-tile data for globe-to-mercator blending of line label placement
+type GlobeLineBlend = {
+    t: number;
+    invMatrix: mat4;
+    mercCenter: [number, number];
 };
 
 type PlacementStatus = {
@@ -267,6 +276,19 @@ function updateLineLabels(bucket: SymbolBucket,
     const partiallyEvaluatedSize = evaluateSizeForZoom(sizeData, painter.transform.zoom, scaleFactor);
     const isGlobe = tr.projection.name === 'globe';
 
+    // Pre-compute the globe-to-mercator blend args once per tile so that the per-vertex
+    // hot path (elevatePointAndProject) never needs to call createInversionMatrix again.
+    const globeLineBlend: GlobeLineBlend | null = (() => {
+        if (!isGlobe) return null;
+        const t = globeToMercatorTransition(tr.zoom);
+        if (t === 0) return null;
+        return {
+            t,
+            invMatrix: tr.projection.createInversionMatrix(tr, tileID.canonical),
+            mercCenter: [mercatorXfromLng(tr.center.lng), mercatorYfromLat(tr.center.lat)] as [number, number],
+        };
+    })();
+
     const clippingBuffer: [number, number] = [256 / painter.width * 2 + 1, 256 / painter.height * 2 + 1];
 
     const dynamicLayoutVertexArray = isText ?
@@ -317,6 +339,16 @@ function updateLineLabels(bucket: SymbolBucket,
         const renderElevatedRoads = bucket.elevationType === 'road';
         const hasElevation = !!tr.elevation || renderElevatedRoads;
         let {x, y, z} = tr.projection.projectTilePoint(tileAnchorPoint.x, tileAnchorPoint.y, tileID.canonical);
+
+        // During the globe-to-mercator transition, blend the anchor position so it
+        // tracks with the blended tile geometry (mirrors the shader's mix_globe_mercator).
+        if (globeLineBlend) {
+            const [mx, my, mz] = getMercatorECEF(tileAnchorPoint, tileID.canonical, globeLineBlend);
+            x += (mx - x) * globeLineBlend.t;
+            y += (my - y) * globeLineBlend.t;
+            z += (mz - z) * globeLineBlend.t;
+        }
+
         let elevationParams: ElevationParams | null = null;
         if (hasElevation) {
             const elevationFeature = renderElevatedRoads && bucket.hdExt ? bucket.hdExt.getElevationFeatureForPlacedSymbol(bucket, isText ? bucket.text : bucket.icon, s) : null;
@@ -360,7 +392,7 @@ function updateLineLabels(bucket: SymbolBucket,
 
         const elevationParamsForPlacement = pitchWithMap ? null : elevationParams; // When pitchWithMap, we're projecting to scaled tile coordinate space: there is no need to get elevation as it doesn't affect projection.
         const placeUnflipped = placeGlyphsAlongLine(symbol, pitchScaledFontSize, false /*unflipped*/, keepUpright, posMatrix, labelPlaneMatrix, glCoordMatrix,
-            bucket.glyphOffsetArray, lineVertexArray, dynamicLayoutVertexArray, globeExtVertexArray, labelPlaneAnchorPoint as unknown as [number, number, number], tileAnchorPoint, projectionCache, aspectRatio, elevationParamsForPlacement, tr.projection, tileID, pitchWithMap, textMaxAngleThreshold);
+            bucket.glyphOffsetArray, lineVertexArray, dynamicLayoutVertexArray, globeExtVertexArray, labelPlaneAnchorPoint as unknown as [number, number, number], tileAnchorPoint, projectionCache, aspectRatio, elevationParamsForPlacement, tr.projection, tileID, pitchWithMap, textMaxAngleThreshold, globeLineBlend);
 
         useVertical = placeUnflipped.useVertical;
 
@@ -368,7 +400,7 @@ function updateLineLabels(bucket: SymbolBucket,
         if (placeUnflipped.notEnoughRoom || useVertical ||
             (placeUnflipped.needsFlipping &&
                 placeGlyphsAlongLine(symbol, pitchScaledFontSize, true /*flipped*/, keepUpright, posMatrix, labelPlaneMatrix, glCoordMatrix,
-                    bucket.glyphOffsetArray, lineVertexArray, dynamicLayoutVertexArray, globeExtVertexArray, labelPlaneAnchorPoint as unknown as [number, number, number], tileAnchorPoint, projectionCache, aspectRatio, elevationParamsForPlacement, tr.projection, tileID, pitchWithMap, textMaxAngleThreshold).notEnoughRoom)) {
+                    bucket.glyphOffsetArray, lineVertexArray, dynamicLayoutVertexArray, globeExtVertexArray, labelPlaneAnchorPoint as unknown as [number, number, number], tileAnchorPoint, projectionCache, aspectRatio, elevationParamsForPlacement, tr.projection, tileID, pitchWithMap, textMaxAngleThreshold, globeLineBlend).notEnoughRoom)) {
             hideGlyphs(numGlyphs, dynamicLayoutVertexArray);
         }
     }
@@ -403,7 +435,8 @@ function placeFirstAndLastGlyph(
     projection: Projection,
     tileID: OverscaledTileID,
     pitchWithMap: boolean,
-    textMaxAngleThreshold: number
+    textMaxAngleThreshold: number,
+    blend?: GlobeLineBlend | null,
 ): null | {
     first: PlacedGlyph;
     last: PlacedGlyph;
@@ -418,13 +451,13 @@ function placeFirstAndLastGlyph(
 
     const firstPlacedGlyph = placeGlyphAlongLine(fontScale * firstGlyphOffset, lineOffsetX, lineOffsetY, flip, anchorPoint, tileAnchorPoint, segment,
         lineStartIndex, lineEndIndex, lineVertexArray, labelPlaneMatrix, projectionCache, elevationParams, returnPathInTileCoords, true, projection, tileID, pitchWithMap,
-        textMaxAngleThreshold);
+        textMaxAngleThreshold, blend);
     if (!firstPlacedGlyph)
         return null;
 
     const lastPlacedGlyph = placeGlyphAlongLine(fontScale * lastGlyphOffset, lineOffsetX, lineOffsetY, flip, anchorPoint, tileAnchorPoint, segment,
         lineStartIndex, lineEndIndex, lineVertexArray, labelPlaneMatrix, projectionCache, elevationParams, returnPathInTileCoords, true, projection, tileID, pitchWithMap,
-        textMaxAngleThreshold);
+        textMaxAngleThreshold, blend);
     if (!lastPlacedGlyph)
         return null;
 
@@ -480,7 +513,8 @@ function placeGlyphsAlongLine(
     projection: Projection,
     tileID: OverscaledTileID,
     pitchWithMap: boolean,
-    textMaxAngleThreshold: number
+    textMaxAngleThreshold: number,
+    blend?: GlobeLineBlend | null,
 ): PlacementStatus {
     const fontScale = fontSize / 24;
     const lineOffsetX = symbol.lineOffsetX * fontScale;
@@ -504,7 +538,7 @@ function placeGlyphsAlongLine(
     if (numGlyphs > 1) {
         // Place the first and the last glyph in the label first, so we can figure out
         // the overall orientation of the label and determine whether it needs to be flipped in keepUpright mode
-        const firstAndLastGlyph = placeFirstAndLastGlyph(fontScale, glyphOffsetArray, lineOffsetX, lineOffsetY, flip, anchorPoint, tileAnchorPoint, symbol, lineVertexArray, labelPlaneMatrix, projectionCache, elevationParams, false, projection, tileID, pitchWithMap, textMaxAngleThreshold);
+        const firstAndLastGlyph = placeFirstAndLastGlyph(fontScale, glyphOffsetArray, lineOffsetX, lineOffsetY, flip, anchorPoint, tileAnchorPoint, symbol, lineVertexArray, labelPlaneMatrix, projectionCache, elevationParams, false, projection, tileID, pitchWithMap, textMaxAngleThreshold, blend);
         if (!firstAndLastGlyph) {
             return {notEnoughRoom: true};
         }
@@ -525,7 +559,7 @@ function placeGlyphsAlongLine(
         for (let glyphIndex = glyphStartIndex + 1; glyphIndex < glyphStartIndex + numGlyphs - 1; glyphIndex++) {
             // Since first and last glyph fit on the line, the rest of the glyphs can be placed too, but check to make sure
             const glyph = placeGlyphAlongLine(fontScale * glyphOffsetArray.getoffsetX(glyphIndex), lineOffsetX, lineOffsetY, flip, anchorPoint, tileAnchorPoint, segment,
-                lineStartIndex, lineEndIndex, lineVertexArray, labelPlaneMatrix, projectionCache, elevationParams, false, false, projection, tileID, pitchWithMap, textMaxAngleThreshold);
+                lineStartIndex, lineEndIndex, lineVertexArray, labelPlaneMatrix, projectionCache, elevationParams, false, false, projection, tileID, pitchWithMap, textMaxAngleThreshold, blend);
             if (!glyph) {
                 // undo previous glyphs of the symbol if it doesn't fit; it will be filled with hideGlyphs instead
                 dynamicLayoutVertexArray.length -= 4 * (glyphIndex - glyphStartIndex);
@@ -556,7 +590,7 @@ function placeGlyphsAlongLine(
             }
         }
         const singleGlyph = placeGlyphAlongLine(fontScale * glyphOffsetArray.getoffsetX(glyphStartIndex), lineOffsetX, lineOffsetY, flip, anchorPoint, tileAnchorPoint, segment,
-            lineStartIndex, lineEndIndex, lineVertexArray, labelPlaneMatrix, projectionCache, elevationParams, false, false, projection, tileID, pitchWithMap, textMaxAngleThreshold);
+            lineStartIndex, lineEndIndex, lineVertexArray, labelPlaneMatrix, projectionCache, elevationParams, false, false, projection, tileID, pitchWithMap, textMaxAngleThreshold, blend);
         if (!singleGlyph) {
             return {notEnoughRoom: true};
         }
@@ -566,8 +600,38 @@ function placeGlyphsAlongLine(
     return {};
 }
 
-function elevatePointAndProject(p: Point, tileID: CanonicalTileID, posMatrix: mat4, projection: Projection, elevationParams: ElevationParams | null) {
-    const {x, y, z} = projection.projectTilePoint(p.x, p.y, tileID);
+// Computes the mercator-equivalent position in globe normalized ECEF space,
+// mirroring the vertex shader's mercator_tile_position() function.
+// blend.invMatrix and blend.mercCenter are pre-computed once per tile by updateLineLabels.
+function getMercatorECEF(
+    p: Point,
+    tileID: CanonicalTileID,
+    blend: GlobeLineBlend,
+): [number, number, number] {
+    const tiles = 1 << tileID.z;
+    let mercX = (p.x / EXTENT + tileID.x) / tiles - blend.mercCenter[0];
+    const mercY = (p.y / EXTENT + tileID.y) / tiles - blend.mercCenter[1];
+    // Wrap to [-0.5, 0.5] — matches shader: mercator.x = wrap(mercator.x, -0.5, 0.5)
+    mercX -= Math.round(mercX);
+    const mercTile: [number, number, number, number] = [mercX * EXTENT, mercY * EXTENT, EXTENT / (2 * Math.PI), 1.0];
+    vec4.transformMat4(mercTile, mercTile, blend.invMatrix);
+    return [mercTile[0], mercTile[1], mercTile[2]];
+}
+
+function elevatePointAndProject(p: Point, tileID: CanonicalTileID, posMatrix: mat4, projection: Projection, elevationParams: ElevationParams | null, blend?: GlobeLineBlend | null) {
+    let {x, y, z} = projection.projectTilePoint(p.x, p.y, tileID);
+
+    // During the globe-to-mercator transition the tile vertices are blended in the
+    // shader via mix(globe_ecef, mercator_ecef, u_zoom_transition).  Line-aligned
+    // label vertices are projected on the CPU, so we must apply the same blend here
+    // to keep them tracking with the underlying tile geometry.
+    if (blend) {
+        const [mx, my, mz] = getMercatorECEF(p, tileID, blend);
+        x += (mx - x) * blend.t;
+        y += (my - y) * blend.t;
+        z += (mz - z) * blend.t;
+    }
+
     if (!elevationParams) {
         return project(x, y, z, posMatrix);
     }
@@ -584,13 +648,14 @@ function projectTruncatedLineSegment(
     elevationParams: ElevationParams,
     projection: Projection,
     tileID: CanonicalTileID,
+    blend?: GlobeLineBlend | null,
 ): [number, number, number] {
     // We are assuming "previousTilePoint" won't project to a point within one unit of the camera plane
     // If it did, that would mean our label extended all the way out from within the viewport to a (very distant)
     // point near the plane of the camera. We wouldn't be able to render the label anyway once it crossed the
     // plane of the camera.
     const unitVertex = previousTilePoint.sub(currentTilePoint)._unit()._add(previousTilePoint);
-    const projectedUnit = elevatePointAndProject(unitVertex, tileID, projectionMatrix, projection, elevationParams);
+    const projectedUnit = elevatePointAndProject(unitVertex, tileID, projectionMatrix, projection, elevationParams, blend);
     vec3.sub(projectedUnit, previousProjectedPoint, projectedUnit);
     vec3.normalize(projectedUnit, projectedUnit);
 
@@ -610,13 +675,14 @@ function placeGlyphAlongLine(
     lineVertexArray: SymbolLineVertexArray,
     labelPlaneMatrix: mat4,
     projectionCache: ProjectionCache,
-    elevationParams: ElevationParams | null,
+    elevationParams: ElevationParams | null | undefined,
     returnPathInTileCoords: boolean | null | undefined,
     endGlyph: boolean | null | undefined,
     reprojection: Projection,
     tileID: OverscaledTileID,
     pitchWithMap: boolean,
-    textMaxAngleThreshold: number
+    textMaxAngleThreshold: number,
+    blend?: GlobeLineBlend | null,
 ): null | PlacedGlyph {
 
     const combinedOffsetX = flip ?
@@ -648,7 +714,7 @@ function placeGlyphAlongLine(
     let prevToCurrent = vec3.zero([]);
 
     const getTruncatedLineSegment = () => {
-        return projectTruncatedLineSegment(prevVertex, currentVertex, prev, absOffsetX - distanceToPrev + 1, labelPlaneMatrix, elevationParams, reprojection, tileID.canonical);
+        return projectTruncatedLineSegment(prevVertex, currentVertex, prev, absOffsetX - distanceToPrev + 1, labelPlaneMatrix, elevationParams, reprojection, tileID.canonical, blend);
     };
 
     while (distanceToPrev + currentSegmentDistance <= absOffsetX) {
@@ -667,7 +733,7 @@ function placeGlyphAlongLine(
         currentVertex = new Point(lineVertexArray.getx(currentIndex), lineVertexArray.gety(currentIndex));
         current = projectionCache[currentIndex];
         if (!current) {
-            const projection = elevatePointAndProject(currentVertex, tileID.canonical, labelPlaneMatrix, reprojection, elevationParams);
+            const projection = elevatePointAndProject(currentVertex, tileID.canonical, labelPlaneMatrix, reprojection, elevationParams, blend);
             if (projection[3] > 0) {
                 current = projectionCache[currentIndex] = projection as unknown as [number, number, number];
             } else {
