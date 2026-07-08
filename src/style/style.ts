@@ -4634,6 +4634,12 @@ class Style extends Evented<MapEvents> {
     addImport(importSpec: ImportSpecification, beforeId?: string | null): Promise<void> {
         this._checkLoaded();
 
+        const reservedImportIds = new Set(['__proto__', 'constructor', 'prototype']);
+        if (reservedImportIds.has(importSpec.id)) {
+            this.fire(new ErrorEvent(new Error(`Import id can't be "${importSpec.id}".`)));
+            return;
+        }
+
         const imports = this.stylesheet.imports = this.stylesheet.imports || [];
 
         const index = imports.findIndex(({id}) => id === importSpec.id);

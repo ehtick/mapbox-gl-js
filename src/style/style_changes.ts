@@ -27,13 +27,13 @@ class StyleChanges {
     constructor() {
         this._changed = false;
 
-        this._updatedLayers = {};
-        this._removedLayers = {};
+        this._updatedLayers = Object.create(null) as typeof this._updatedLayers;
+        this._removedLayers = Object.create(null) as typeof this._removedLayers;
 
-        this._updatedSourceCaches = {};
+        this._updatedSourceCaches = Object.create(null) as typeof this._updatedSourceCaches;
         this._updatedPaintProps = new Set();
 
-        this._updatedImages = {};
+        this._updatedImages = Object.create(null) as typeof this._updatedImages;
     }
 
     isDirty(): boolean {
@@ -173,13 +173,13 @@ class StyleChanges {
     reset() {
         this._changed = false;
 
-        this._updatedLayers = {};
-        this._removedLayers = {};
+        this._updatedLayers = Object.create(null) as typeof this._updatedLayers;
+        this._removedLayers = Object.create(null) as typeof this._removedLayers;
 
-        this._updatedSourceCaches = {};
+        this._updatedSourceCaches = Object.create(null) as typeof this._updatedSourceCaches;
         this._updatedPaintProps.clear();
 
-        this._updatedImages = {};
+        this._updatedImages = Object.create(null) as typeof this._updatedImages;
     }
 }
 

@@ -2467,6 +2467,12 @@ export class Map extends Camera {
             return false;
         }
 
+        // Disallow reserved prototype property names
+        if (id === '__proto__' || id === 'constructor' || id === 'prototype') {
+            this.fire(new ErrorEvent(new Error(`IDs can't be "${id}".`)));
+            return false;
+        }
+
         return true;
     }
 
@@ -3175,6 +3181,10 @@ export class Map extends Camera {
      * }, 'basemap');
      */
     addImport(importSpecification: ImportSpecification, beforeId?: string | null): this {
+        if (!this._isValidId(importSpecification.id)) {
+            return this;
+        }
+
         this.style.addImport(importSpecification, beforeId)
             // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             .catch((e) => this.fire(new ErrorEvent(new Error('Failed to add import', e))));

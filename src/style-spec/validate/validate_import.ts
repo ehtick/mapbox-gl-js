@@ -43,11 +43,11 @@ export default function validateImport(options: ImportValidatorOptions): Validat
         errors.push(new ValidationError(key, importSpec, `import id can't be an empty string`));
     }
 
-    // Reject reserved prototype-pollution key — the import id is used as a scope
-    // string that becomes a dictionary key in several runtime caches.
-    if (unbundle(importSpec.id) === '__proto__') {
+    // Reject reserved prototype-pollution keys
+    const importId = unbundle(importSpec.id);
+    if (importId === '__proto__' || importId === 'constructor' || importId === 'prototype') {
         const key = `${options.key}.id`;
-        errors.push(new ValidationError(key, importSpec, `import id can't be "__proto__"`));
+        errors.push(new ValidationError(key, importSpec, `import id can't be "${String(importId)}"`));
     }
 
     if (data) {

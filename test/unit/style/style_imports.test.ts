@@ -779,6 +779,42 @@ describe('Style#addImport', () => {
             'streets-v2'
         ]);
     });
+
+    test('rejects "__proto__" import id to prevent prototype pollution', async () => {
+        const {style} = newStubStyle();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        style.loadJSON(createStyleJSON());
+        await waitFor(style, 'style.load');
+
+        const errorSpy = vi.fn();
+        style.on('error', errorSpy);
+
+        // addImport fires an error event and returns early without mutating state
+        style.addImport({id: '__proto__', url: '/style.json'});
+
+        expect(errorSpy).toHaveBeenCalledOnce();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        expect(errorSpy.mock.calls[0][0].error.message).toMatch('__proto__');
+        // Must not have added the import and must not have polluted Object.prototype
+        expect(style.stylesheet.imports ?? []).toHaveLength(0);
+        expect(Object.hasOwn({}, 0)).toBe(false);
+    });
+
+    test('rejects "constructor" and "prototype" import ids to prevent prototype pollution', async () => {
+        const {style} = newStubStyle();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        style.loadJSON(createStyleJSON());
+        await waitFor(style, 'style.load');
+
+        const errorSpy = vi.fn();
+        style.on('error', errorSpy);
+
+        style.addImport({id: 'constructor', url: '/style.json'});
+        style.addImport({id: 'prototype', url: '/style.json'});
+
+        expect(errorSpy).toHaveBeenCalledTimes(2);
+        expect(style.stylesheet.imports ?? []).toHaveLength(0);
+    });
 });
 
 describe('Style#updateImport', () => {
