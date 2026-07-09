@@ -119,7 +119,7 @@ describe('AtlasContentDescriptor', () => {
         const patterns: StyleImageMap<StringifiedImageVariant> = new Map([[createImageVariantId('pattern'), createMockImage('pattern')]]);
         const versions: Map<string, number> = new Map([['icon', 1], ['pattern', 1]]);
 
-        const descriptor = new AtlasContentDescriptor(icons, patterns, versions, null);
+        const descriptor = new AtlasContentDescriptor(icons, patterns, versions, null, '');
 
         expect(descriptor.hash).toBeDefined();
         expect(typeof descriptor.hash).toEqual('number');
@@ -130,8 +130,8 @@ describe('AtlasContentDescriptor', () => {
         const patterns: StyleImageMap<StringifiedImageVariant> = new Map([[createImageVariantId('pattern'), createMockImage('pattern')]]);
         const versions: Map<string, number> = new Map([['icon', 1], ['pattern', 1]]);
 
-        const descriptor1 = new AtlasContentDescriptor(icons, patterns, versions, null);
-        const descriptor2 = new AtlasContentDescriptor(icons, patterns, versions, null);
+        const descriptor1 = new AtlasContentDescriptor(icons, patterns, versions, null, '');
+        const descriptor2 = new AtlasContentDescriptor(icons, patterns, versions, null, '');
 
         expect(descriptor1.hash).toEqual(descriptor2.hash);
     });
@@ -142,8 +142,8 @@ describe('AtlasContentDescriptor', () => {
         const patterns: StyleImageMap<StringifiedImageVariant> = new Map();
         const versions: Map<string, number> = new Map([['icon1', 1], ['icon2', 1]]);
 
-        const descriptor1 = new AtlasContentDescriptor(icons1, patterns, versions, null);
-        const descriptor2 = new AtlasContentDescriptor(icons2, patterns, versions, null);
+        const descriptor1 = new AtlasContentDescriptor(icons1, patterns, versions, null, '');
+        const descriptor2 = new AtlasContentDescriptor(icons2, patterns, versions, null, '');
 
         expect(descriptor1.hash).not.toEqual(descriptor2.hash);
     });
@@ -154,10 +154,36 @@ describe('AtlasContentDescriptor', () => {
         const versions1: Map<string, number> = new Map([['icon', 1]]);
         const versions2: Map<string, number> = new Map([['icon', 2]]);
 
-        const descriptor1 = new AtlasContentDescriptor(icons, patterns, versions1, null);
-        const descriptor2 = new AtlasContentDescriptor(icons, patterns, versions2, null);
+        const descriptor1 = new AtlasContentDescriptor(icons, patterns, versions1, null, '');
+        const descriptor2 = new AtlasContentDescriptor(icons, patterns, versions2, null, '');
 
         expect(descriptor1.hash).not.toEqual(descriptor2.hash);
+    });
+
+    test('different scopes produce different hash for identical id/version/scale (GLJS-1882)', () => {
+        // Images and their versions are namespaced per style scope (ImageManager), so
+        // two unrelated scopes (e.g. distinct imported styles) can each independently
+        // hold an image with the same id at the same version but different pixels.
+        // The scope must be part of the hash or the two collide.
+        const icons: StyleImageMap<StringifiedImageVariant> = new Map([[createImageVariantId('shared-icon'), createMockImage('shared-icon')]]);
+        const patterns: StyleImageMap<StringifiedImageVariant> = new Map();
+        const versions: Map<string, number> = new Map([['shared-icon', 1]]);
+
+        const privateDescriptor = new AtlasContentDescriptor(icons, patterns, versions, null, 'private');
+        const publicDescriptor = new AtlasContentDescriptor(icons, patterns, versions, null, 'public');
+
+        expect(privateDescriptor.hash).not.toEqual(publicDescriptor.hash);
+    });
+
+    test('subsetOf returns false across different scopes even when content would otherwise be a subset (GLJS-1882)', () => {
+        const icons: StyleImageMap<StringifiedImageVariant> = new Map([[createImageVariantId('shared-icon'), createMockImage('shared-icon')]]);
+        const patterns: StyleImageMap<StringifiedImageVariant> = new Map();
+        const versions: Map<string, number> = new Map([['shared-icon', 1]]);
+
+        const privateDescriptor = new AtlasContentDescriptor(icons, patterns, versions, null, 'private');
+        const publicDescriptor = new AtlasContentDescriptor(icons, patterns, versions, null, 'public');
+
+        expect(publicDescriptor.subsetOf(privateDescriptor)).toBe(false);
     });
 
     test('sets requiresMipMaps when patterns are present', () => {
@@ -165,7 +191,7 @@ describe('AtlasContentDescriptor', () => {
         const patterns: StyleImageMap<StringifiedImageVariant> = new Map([[createImageVariantId('pattern'), createMockImage('pattern')]]);
         const versions: Map<string, number> = new Map([['icon', 1], ['pattern', 1]]);
 
-        const descriptor = new AtlasContentDescriptor(icons, patterns, versions, null);
+        const descriptor = new AtlasContentDescriptor(icons, patterns, versions, null, '');
 
         expect(descriptor.requiresMipMaps).toBe(true);
     });
@@ -175,7 +201,7 @@ describe('AtlasContentDescriptor', () => {
         const patterns: StyleImageMap<StringifiedImageVariant> = new Map();
         const versions: Map<string, number> = new Map([['icon', 1]]);
 
-        const descriptor = new AtlasContentDescriptor(icons, patterns, versions, null);
+        const descriptor = new AtlasContentDescriptor(icons, patterns, versions, null, '');
 
         expect(descriptor.requiresMipMaps).toBe(false);
     });
@@ -189,8 +215,8 @@ describe('AtlasContentDescriptor', () => {
         const patterns: StyleImageMap<StringifiedImageVariant> = new Map();
         const versions: Map<string, number> = new Map([['icon1', 1], ['icon2', 1]]);
 
-        const descriptor1 = new AtlasContentDescriptor(icons1, patterns, versions, null);
-        const descriptor2 = new AtlasContentDescriptor(icons2, patterns, versions, null);
+        const descriptor1 = new AtlasContentDescriptor(icons1, patterns, versions, null, '');
+        const descriptor2 = new AtlasContentDescriptor(icons2, patterns, versions, null, '');
 
         expect(descriptor1.subsetOf(descriptor2)).toBe(true);
     });
@@ -201,8 +227,8 @@ describe('AtlasContentDescriptor', () => {
         const patterns: StyleImageMap<StringifiedImageVariant> = new Map();
         const versions: Map<string, number> = new Map([['icon1', 1], ['icon2', 1]]);
 
-        const descriptor1 = new AtlasContentDescriptor(icons1, patterns, versions, null);
-        const descriptor2 = new AtlasContentDescriptor(icons2, patterns, versions, null);
+        const descriptor1 = new AtlasContentDescriptor(icons1, patterns, versions, null, '');
+        const descriptor2 = new AtlasContentDescriptor(icons2, patterns, versions, null, '');
 
         expect(descriptor1.subsetOf(descriptor2)).toBe(false);
     });
@@ -216,8 +242,8 @@ describe('AtlasContentDescriptor', () => {
         const patterns: StyleImageMap<StringifiedImageVariant> = new Map();
         const versions: Map<string, number> = new Map([['icon1', 1], ['icon2', 1]]);
 
-        const descriptor1 = new AtlasContentDescriptor(icons1, patterns, versions, null);
-        const descriptor2 = new AtlasContentDescriptor(icons2, patterns, versions, null);
+        const descriptor1 = new AtlasContentDescriptor(icons1, patterns, versions, null, '');
+        const descriptor2 = new AtlasContentDescriptor(icons2, patterns, versions, null, '');
 
         // Should return false immediately without iterating
         expect(descriptor1.subsetOf(descriptor2)).toBe(false);
@@ -235,7 +261,7 @@ describe('ImageAtlasCache', () => {
         const icons: StyleImageMap<StringifiedImageVariant> = new Map([[createImageVariantId('icon'), createMockImage('icon')]]);
         const patterns: StyleImageMap<StringifiedImageVariant> = new Map();
         const versions: Map<string, number> = new Map([['icon', 1]]);
-        const descriptor = new AtlasContentDescriptor(icons, patterns, versions, null);
+        const descriptor = new AtlasContentDescriptor(icons, patterns, versions, null, '');
 
         const result = cache.findCachedAtlas(descriptor);
 
@@ -252,7 +278,7 @@ describe('ImageAtlasCache', () => {
         cache.getOrCache(atlas);
 
         // Try to find it with same descriptor
-        const descriptor = new AtlasContentDescriptor(icons, patterns, versions, null);
+        const descriptor = new AtlasContentDescriptor(icons, patterns, versions, null, '');
         const result = cache.findCachedAtlas(descriptor);
 
         expect(result).toBe(atlas);
@@ -273,10 +299,35 @@ describe('ImageAtlasCache', () => {
 
         // Try to find it with subset descriptor (only icon1)
         const subsetIcons: StyleImageMap<StringifiedImageVariant> = new Map([[createImageVariantId('icon1'), createMockImage('icon1')]]);
-        const descriptor = new AtlasContentDescriptor(subsetIcons, patterns, versions, null);
+        const descriptor = new AtlasContentDescriptor(subsetIcons, patterns, versions, null, '');
         const result = cache.findCachedAtlas(descriptor);
 
         expect(result).toBe(atlas);
+    });
+
+    test('findCachedAtlas does not return another scope\'s atlas via subset match (GLJS-1882)', () => {
+        // The subset-match scan in findCachedAtlas iterates the whole cache regardless
+        // of hash, so scope must also be checked in subsetOf, not just baked into the
+        // hash used for the exact-match lookup.
+        const icons: StyleImageMap<StringifiedImageVariant> = new Map([
+            [createImageVariantId('icon1'), createMockImage('icon1')],
+            [createImageVariantId('icon2'), createMockImage('icon2')]
+        ]);
+        const patterns: StyleImageMap<StringifiedImageVariant> = new Map();
+        const versions: Map<string, number> = new Map([['icon1', 1], ['icon2', 1]]);
+
+        // Cache an atlas belonging to the "private" scope containing icon1 and icon2.
+        const privateAtlas = new ImageAtlas(icons, patterns, null, versions, 'private');
+        cache.getOrCache(privateAtlas);
+
+        // A "public" scope tile requests only icon1, with the same id/version/scale.
+        // Content-wise this looks like a subset of the private atlas, but the two
+        // scopes are unrelated and must never share cached atlases.
+        const subsetIcons: StyleImageMap<StringifiedImageVariant> = new Map([[createImageVariantId('icon1'), createMockImage('icon1')]]);
+        const descriptor = new AtlasContentDescriptor(subsetIcons, patterns, versions, null, 'public');
+        const result = cache.findCachedAtlas(descriptor);
+
+        expect(result).toBeUndefined();
     });
 
     test('getOrCache returns same atlas for duplicate content', () => {
@@ -327,7 +378,7 @@ describe('ImageAtlasCache', () => {
         cache.getOrCache(atlas);
 
         // Request without patterns (no mipmaps needed)
-        const descriptor = new AtlasContentDescriptor(icons, new Map(), versions, null);
+        const descriptor = new AtlasContentDescriptor(icons, new Map(), versions, null, '');
         const result = cache.findCachedAtlas(descriptor);
 
         expect(result).toBe(atlas); // Should find it despite mipmap difference
@@ -344,7 +395,7 @@ describe('ImageAtlasCache', () => {
         // Request with patterns (mipmaps needed)
         const patternsNeeded: StyleImageMap<StringifiedImageVariant> = new Map([[createImageVariantId('pattern'), createMockImage('pattern')]]);
         const versionsWithPattern: Map<string, number> = new Map([['icon', 1], ['pattern', 1]]);
-        const descriptor = new AtlasContentDescriptor(icons, patternsNeeded, versionsWithPattern, null);
+        const descriptor = new AtlasContentDescriptor(icons, patternsNeeded, versionsWithPattern, null, '');
         const result = cache.findCachedAtlas(descriptor);
 
         expect(result).toBeUndefined(); // Should NOT find it
@@ -389,7 +440,7 @@ describe('ImageAtlasCache', () => {
         expect(newTexture).not.toBe(texture);
 
         // Atlas should not be in cache anymore
-        const descriptor = new AtlasContentDescriptor(icons, patterns, versions, null);
+        const descriptor = new AtlasContentDescriptor(icons, patterns, versions, null, '');
         const cachedAtlas = cache.findCachedAtlas(descriptor);
         expect(cachedAtlas).toBeUndefined();
     });
@@ -414,7 +465,7 @@ describe('ImageAtlasCache', () => {
         cache.getOrCache(oldAtlas);
 
         // New tile requests the same image name but with new (grey) params
-        const newDescriptor = new AtlasContentDescriptor(newIcons, patterns, versions, null);
+        const newDescriptor = new AtlasContentDescriptor(newIcons, patterns, versions, null, '');
         const result = cache.findCachedAtlas(newDescriptor);
 
         expect(result).toBeUndefined();
@@ -432,7 +483,7 @@ describe('ImageAtlasCache', () => {
         cache.destroyTextures();
 
         // Atlas should still be in cache
-        const descriptor = new AtlasContentDescriptor(icons, patterns, versions, null);
+        const descriptor = new AtlasContentDescriptor(icons, patterns, versions, null, '');
         const cachedAtlas = cache.findCachedAtlas(descriptor);
         expect(cachedAtlas).toBe(atlas);
 
@@ -589,7 +640,7 @@ describe('ImageAtlasCache - version invalidation', () => {
         cache.getOrCache(atlas1);
 
         // Try to find with different version
-        const descriptor = new AtlasContentDescriptor(icons, patterns, versions2, null);
+        const descriptor = new AtlasContentDescriptor(icons, patterns, versions2, null, '');
         const result = cache.findCachedAtlas(descriptor);
 
         expect(result).toBeUndefined();
@@ -606,7 +657,7 @@ describe('ImageAtlasCache - version invalidation', () => {
         cache.getOrCache(atlas);
 
         // Create new atlas with same version (shouldn't happen in practice, but tests cache behavior)
-        const descriptor = new AtlasContentDescriptor(icons, patterns, versions, null);
+        const descriptor = new AtlasContentDescriptor(icons, patterns, versions, null, '');
         const result = cache.findCachedAtlas(descriptor);
 
         expect(result).toBe(atlas);

@@ -66,6 +66,7 @@ export type ImageVersionsMap = Map<string, number>;
 export class AtlasContentDescriptor {
     hash: number;
     requiresMipMaps: boolean;
+    private scope: string;
 
     private iconDescriptors: ImageDescriptor[];
     private patternDescriptors: ImageDescriptor[];
@@ -75,8 +76,10 @@ export class AtlasContentDescriptor {
         patterns: StyleImageMap<StringifiedImageVariant>,
         imageVersions: ImageVersionsMap,
         lut: LUT | null,
+        scope: string = '',
         variantCache?: Map<StringifiedImageVariant, ImageVariant>
     ) {
+        this.scope = scope;
         this.iconDescriptors = [];
         this.patternDescriptors = [];
         // Mipmaps are required when patterns are present
@@ -94,6 +97,8 @@ export class AtlasContentDescriptor {
 
         // Calculate combined hash
         let seed = 0;
+        seed = combineHash(seed, hashCode(scope));
+        seed = combineHash(seed, 1); // separator
         const lutData = lut ? lut.data : '';
         if (lutData) {
             seed = combineHash(seed, hashCode(lutData));
@@ -121,6 +126,8 @@ export class AtlasContentDescriptor {
      * Returns true if all images in this descriptor are also present in the other descriptor.
      */
     subsetOf(other: AtlasContentDescriptor): boolean {
+        if (this.scope !== other.scope) return false;
+
         return (
             this.isSubsetArray(this.iconDescriptors, other.iconDescriptors, compareImageDescriptors) &&
             this.isSubsetArray(this.patternDescriptors, other.patternDescriptors, compareImageDescriptors)

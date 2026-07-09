@@ -25,6 +25,13 @@ import {OverscaledTileID} from '../../../src/source/tile_id';
 import {ImageId} from '../../../src/style-spec/expression/types/image_id';
 import {StubMap, newStubStyle} from './utils';
 import {makeFQID} from '../../../src/util/fqid';
+import {RGBAImage} from '../../../src/util/image';
+import {ImageVariant} from '../../../src/style-spec/expression/types/image_variant';
+import {AtlasContentDescriptor} from '../../../src/render/atlas_content_descriptor';
+import ImageAtlas from '../../../src/render/image_atlas';
+
+import type {StyleImageMap} from '../../../src/style/style_image';
+import type {StringifiedImageVariant} from '../../../src/style-spec/expression/types/image_variant';
 
 function createStyleJSON(properties) {
     return {"version": 8,
@@ -3048,6 +3055,49 @@ test('Style#removeImage', async () => {
             dataType: 'style'
         })
     );
+});
+
+test('Style#checkAtlasCache does not leak atlas content across style scopes', async () => {
+    const map = new StubMap();
+
+    const privateStyle = new Style(map, {scope: 'private'});
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    privateStyle.loadJSON(createStyleJSON());
+    await waitFor(privateStyle, 'style.load');
+
+    const publicStyle = new Style(map, {scope: 'public', imageManager: privateStyle.imageManager});
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    publicStyle.loadJSON(createStyleJSON());
+    await waitFor(publicStyle, 'style.load');
+
+    const imageId = ImageId.from('shared-icon');
+    const redPixels = new Uint8Array([255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255]);
+    const bluePixels = new Uint8Array([0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255]);
+
+    privateStyle.addImage(imageId, {data: new RGBAImage({width: 2, height: 2}, redPixels), pixelRatio: 1, version: 1, sdf: false, usvg: false});
+    publicStyle.addImage(imageId, {data: new RGBAImage({width: 2, height: 2}, bluePixels), pixelRatio: 1, version: 1, sdf: false, usvg: false});
+
+    const variantId = new ImageVariant('shared-icon').toString();
+    const privateIcons: StyleImageMap<StringifiedImageVariant> = new Map([[variantId, privateStyle.imageManager.getImage(imageId, 'private')]]);
+    const publicIcons: StyleImageMap<StringifiedImageVariant> = new Map([[variantId, publicStyle.imageManager.getImage(imageId, 'public')]]);
+    const noPatterns: StyleImageMap<StringifiedImageVariant> = new Map();
+
+    const privateVersions = privateStyle.imageManager.getImageVersions('private');
+    const publicVersions = publicStyle.imageManager.getImageVersions('public');
+
+    const privateDescriptor = new AtlasContentDescriptor(privateIcons, noPatterns, privateVersions, null, 'private');
+    const publicDescriptor = new AtlasContentDescriptor(publicIcons, noPatterns, publicVersions, null, 'public');
+
+    // The descriptor hash includes the scope, so the two unrelated per-scope
+    // images no longer collide despite having identical id/version/scale.
+    expect(privateDescriptor.hash).not.toEqual(publicDescriptor.hash);
+
+    // Simulate the private scope's tile being processed first, caching its atlas.
+    const privateAtlas = new ImageAtlas(privateIcons, noPatterns, null, privateVersions, 'private');
+    privateStyle.imageManager.imageAtlasCache.getOrCache(privateAtlas);
+
+    const result = await publicStyle.checkAtlasCache(undefined, {descriptor: publicDescriptor, scope: 'public'});
+    expect(result).toBeNull();
 });
 
 test('Style#_updateTilesForChangedImages', async () => {

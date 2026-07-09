@@ -620,7 +620,7 @@ class WorkerTile {
                     const variantCache = new Map<StringifiedImageVariant, ImageVariant>();
                     const sortedIcons = sortImagesMap(iconMap, variantCache);
                     const sortedPatterns = sortImagesMap(patternMap, variantCache);
-                    const descriptor = new AtlasContentDescriptor(sortedIcons, sortedPatterns, imageVersions, this.lut, variantCache);
+                    const descriptor = new AtlasContentDescriptor(sortedIcons, sortedPatterns, imageVersions, this.lut, this.scope, variantCache);
 
                     actor.send('checkAtlasCache', {descriptor, scope: this.scope})
                         .then((cachedPositions) => {
@@ -631,7 +631,7 @@ class WorkerTile {
                                 imageAtlasForTransfer = new ImageAtlasReference(cachedPositions.sourceHash);
                                 positions = cachedPositions;
                             } else {
-                                const imageAtlas = new ImageAtlas(iconMap, patternMap, this.lut, imageVersions);
+                                const imageAtlas = new ImageAtlas(iconMap, patternMap, this.lut, imageVersions, this.scope);
                                 imageAtlasForTransfer = imageAtlas;
                                 positions = imageAtlas;
                             }
@@ -640,7 +640,7 @@ class WorkerTile {
                         })
                         .catch((err: Error) => {
                             if (err.name !== 'AbortError') warnOnce(`[Worker] Error checking atlas cache: ${err.message}`);
-                            const imageAtlas = new ImageAtlas(iconMap, patternMap, this.lut, imageVersions);
+                            const imageAtlas = new ImageAtlas(iconMap, patternMap, this.lut, imageVersions, this.scope);
                             completeBucketProcessing(imageAtlas, imageAtlas);
                         });
                 } else {
