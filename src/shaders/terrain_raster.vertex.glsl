@@ -25,6 +25,9 @@ void main() {
     vec2 decodedPos = decomposedPosAndSkirt.xy;
     float elevation = elevation(decodedPos) - skirt * u_skirt_height;
     v_pos0 = decodedPos / 8192.0;
+#ifdef VIEWPORT_ORIGIN_TOP_LEFT
+    v_pos0.y = 1.0 - v_pos0.y;
+#endif
     gl_Position = u_matrix * vec4(decodedPos, elevation, 1.0);
 
 #ifdef FOG

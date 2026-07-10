@@ -69,5 +69,8 @@ void main() {
 #endif // endif PROJECTION_GLOBE_VIEW
 
     v_pos0 = uv;
+#ifdef VIEWPORT_ORIGIN_TOP_LEFT
+    v_pos0.y = 1.0 - v_pos0.y;
+#endif
     v_pos1 = (v_pos0 * u_scale_parent) + u_tl_parent;
 }

@@ -3,7 +3,6 @@
 
 uniform mat4 u_matrix;
 uniform float u_extrude_scale;
-uniform float u_opacity;
 uniform float u_intensity;
 
 in ivec2 a_pos;

@@ -1,5 +1,13 @@
 // NOTE: This prelude is injected in the fragment shader only
 
+// Normalized viewport UV from gl_FragCoord uses bottom-left origin by default.
+// Metal (VIEWPORT_ORIGIN_TOP_LEFT) and Vulkan (FLIP_Y) use top-left; flip Y when either is defined.
+#if defined(VIEWPORT_ORIGIN_TOP_LEFT) || defined(FLIP_Y)
+#define FLIP_VIEWPORT_UV_Y(uv) (uv).y = 1.0 - (uv).y
+#else
+#define FLIP_VIEWPORT_UV_Y(uv)
+#endif
+
 // DUAL_SOURCE_BLENDING and USE_MRT1 are mutually exclusive. Please define only one.
 #ifdef DUAL_SOURCE_BLENDING
 layout(location = 0, index = 0) out vec4 glFragColor;
@@ -24,7 +32,12 @@ highp float unpack_depth(highp vec4 rgba_depth)
 // shadow mapping examples.
 // https://aras-p.info/blog/2009/07/30/encoding-floats-to-rgba-the-final/
 highp vec4 pack_depth(highp float ndc_z) {
+#ifdef CLIP_ZERO_TO_ONE
+    // ndc_z is already in [0, 1] (Metal's native clip-space z range), so skip the GL-style remap.
+    highp float depth = ndc_z;
+#else
     highp float depth = ndc_z * 0.5 + 0.5;
+#endif
     const highp vec4 bit_shift = vec4(255.0 * 255.0 * 255.0, 255.0 * 255.0, 255.0, 1.0);
     const highp vec4 bit_mask  = vec4(0.0, 1.0 / 255.0, 1.0 / 255.0, 1.0 / 255.0);
     highp vec4 res = fract(depth * bit_shift);

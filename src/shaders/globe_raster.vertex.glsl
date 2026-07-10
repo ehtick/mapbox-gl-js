@@ -4,10 +4,14 @@
 uniform mat4 u_proj_matrix;
 uniform mat4 u_normalize_matrix;
 uniform mat4 u_globe_matrix;
+#ifndef GLOBE_POLES
 uniform mat4 u_merc_matrix;
+#endif
 uniform float u_zoom_transition;
 uniform vec2 u_merc_center;
+#ifndef GLOBE_POLES
 uniform mat3 u_grid_matrix;
+#endif
 uniform float u_skirt_height;
 
 #ifdef GLOBE_POLES
@@ -46,6 +50,9 @@ void main() {
 #endif
 
     v_pos0 = uv;
+#ifdef VIEWPORT_ORIGIN_TOP_LEFT
+    v_pos0.y = 1.0 - v_pos0.y;
+#endif
     vec2 tile_pos = uv * EXTENT;
 
     // Used for poles and skirts

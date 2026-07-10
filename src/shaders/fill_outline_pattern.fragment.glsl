@@ -64,8 +64,8 @@ void main() {
 #endif
 
 #ifdef FILL_PATTERN_TRANSITION
-    vec2 pattern_b_tl = pattern_b.xy;
-    vec2 pattern_b_br = pattern_b.zw;
+    vec2 pattern_b_tl = vec2(pattern_b.xy);
+    vec2 pattern_b_br = vec2(pattern_b.zw);
     highp vec2 pos_b = mix(pattern_b_tl / u_texsize, pattern_b_br / u_texsize, imagecoord);
     vec4 color_b = textureLodCustom(u_image, pos_b, lod_pos);
     out_color = out_color * (1.0 - u_pattern_transition) + color_b * u_pattern_transition;

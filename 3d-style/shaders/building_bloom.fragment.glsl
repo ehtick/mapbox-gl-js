@@ -1,13 +1,14 @@
 in vec4 v_color_emissive;
 
 #pragma mapbox: define-attribute highp vec4 bloom_attenuation
-#pragma mapbox: initialize-attribute highp vec4 bloom_attenuation
 
 float saturate(float val) {
     return clamp(val, 0.0, 1.0);
 }
 
 void main() {
+    #pragma mapbox: initialize-attribute highp vec4 bloom_attenuation
+
     float emission = v_color_emissive.a;
     float opacity = 1.0;
 
