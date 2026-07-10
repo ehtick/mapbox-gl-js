@@ -15,6 +15,8 @@ import {newStubStyle} from './utils';
 import browser from '../../../src/util/browser';
 import EvaluationParameters from '../../../src/style/evaluation_parameters';
 
+import type {StyleSpecification} from 'mapbox-gl';
+
 function createStyleJSON(properties) {
     return {version: 8,
         sources: {},
@@ -3850,4 +3852,41 @@ test('Style#getFragmentStyle', async () => {
 
     // Fragment should return itself when fragmentId is `undefined`
     expect(basemapFragment2.getFragmentStyle()).toBe(basemapFragment2);
+});
+
+describe('feature-state with imported layer targets', () => {
+    async function loadCollidingRootAndImport() {
+        const {style} = newStubStyle();
+        const fragment = createStyleJSON({
+            sources: {shared: {type: 'geojson', data: {type: 'FeatureCollection', features: []}}},
+            layers: [{id: 'fragment-layer', type: 'circle', source: 'shared'}]
+        }) as StyleSpecification;
+        const root = createStyleJSON({
+            sources: {shared: {type: 'geojson', data: {type: 'FeatureCollection', features: []}}},
+            layers: [{id: 'root-layer', type: 'circle', source: 'shared'}],
+            imports: [{id: 'fragment', url: '', data: fragment}]
+        }) as StyleSpecification;
+        style.loadJSON(root);
+        await waitFor(style, 'style.load');
+        return {style, fragmentStyle: style.getFragmentStyle('fragment')};
+    }
+
+    test('imported-layer setFeatureState writes to the fragment source, not the colliding root source', async () => {
+        const {style, fragmentStyle} = await loadCollidingRootAndImport();
+        const importedLayerId = makeFQID('fragment-layer', 'fragment');
+
+        style.setFeatureState({id: 1, target: {layerId: importedLayerId}}, {hover: true});
+
+        expect(fragmentStyle.getFeatureState({source: 'shared', id: 1})).toEqual({hover: true});
+        expect(style.getFeatureState({source: 'shared', id: 1})).toEqual({});
+    });
+
+    test('root-layer setFeatureState still writes to the root source', async () => {
+        const {style, fragmentStyle} = await loadCollidingRootAndImport();
+
+        style.setFeatureState({id: 2, target: {layerId: 'root-layer'}}, {hover: true});
+
+        expect(style.getFeatureState({source: 'shared', id: 2})).toEqual({hover: true});
+        expect(fragmentStyle.getFeatureState({source: 'shared', id: 2})).toEqual({});
+    });
 });

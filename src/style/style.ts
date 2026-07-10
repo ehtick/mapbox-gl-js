@@ -3419,7 +3419,10 @@ class Style extends Evented<MapEvents> {
             } else if ('layerId' in target.target) {
                 const {layerId} = target.target;
                 const layer = this.getLayer(layerId);
-                this.setFeatureState({id: target.id, source: layer.source, sourceLayer: layer.sourceLayer}, state);
+                if (!layer) return;
+                const fragment = this.getFragmentStyle(layer.scope);
+                if (!fragment) return;
+                fragment.setFeatureState({id: target.id, source: layer.source, sourceLayer: layer.sourceLayer}, state);
             }
 
             return;
@@ -3465,7 +3468,10 @@ class Style extends Evented<MapEvents> {
             } else if ('layerId' in target.target) {
                 const {layerId} = target.target;
                 const layer = this.getLayer(layerId);
-                this.removeFeatureState({id: target.id, source: layer.source, sourceLayer: layer.sourceLayer}, key);
+                if (!layer) return;
+                const fragment = this.getFragmentStyle(layer.scope);
+                if (!fragment) return;
+                fragment.removeFeatureState({id: target.id, source: layer.source, sourceLayer: layer.sourceLayer}, key);
             }
 
             return;
@@ -3519,7 +3525,10 @@ class Style extends Evented<MapEvents> {
             } else if ('layerId' in target.target) {
                 const {layerId} = target.target;
                 const layer = this.getLayer(layerId);
-                finalState = this.getFeatureState({id: target.id, source: layer.source, sourceLayer: layer.sourceLayer});
+                if (!layer) return;
+                const fragment = this.getFragmentStyle(layer.scope);
+                if (!fragment) return;
+                finalState = fragment.getFeatureState({id: target.id, source: layer.source, sourceLayer: layer.sourceLayer});
             }
 
             return finalState;
