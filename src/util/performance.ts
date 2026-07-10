@@ -3,14 +3,6 @@ import {LivePerformanceMarkers} from '../util/live_performance';
 
 import type {RequestParameters} from '../util/ajax';
 
-declare global {
-    interface Console {
-        // Chrome DevTools extension: timeStamp accepts extra args for performance tracing
-        // eslint-disable-next-line @typescript-eslint/method-signature-style
-        timeStamp(label?: string, start?: string | number, end?: string | number, trackName?: string): void;
-    }
-}
-
 export const PerformanceMarkers = {
     libraryEvaluate: 'library-evaluate',
     frameGPU: 'frame-gpu',

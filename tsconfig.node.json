@@ -14,6 +14,7 @@
   "include": [
     "./build/**/*",
     "./test/**/*",
+    "./src/types/globals.d.ts",
     "./*.config.*",
     "./src/style-spec/test.js",
     "./src/style-spec/rollup.config.js",

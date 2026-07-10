@@ -93,7 +93,7 @@ export default async function (directory, implementation, options, run) {
         const test = style.metadata.test;
 
         // eslint-disable-next-line no-await-in-loop -- tests must run sequentially
-        await new Promise((resolve) => {
+        await /** @type {Promise<void>} */(new Promise((resolve) => {
             function handleResult(error) {
                 if (error) {
                     test.error = error;
@@ -129,7 +129,7 @@ export default async function (directory, implementation, options, run) {
             } catch (error) {
                 handleResult(error);
             }
-        });
+        }));
     }
 
     await server.close();

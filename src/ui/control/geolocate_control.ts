@@ -23,12 +23,6 @@ export type GeolocateControlOptions = {
     followUserLocation?: boolean;
 };
 
-declare global {
-    interface DeviceOrientationEvent {
-        readonly webkitCompassHeading?: number;
-    }
-}
-
 type DeviceOrientationEventStatic = typeof DeviceOrientationEvent & {
     requestPermission?: () => Promise<'granted' | 'denied' | 'prompt'>;
 };

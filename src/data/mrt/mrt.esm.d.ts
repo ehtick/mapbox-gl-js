@@ -1,6 +1,6 @@
 /**
  * We need to keep TypeScript definitions of the `mrt.esm.js` in a separate file
- * because `dts-bundle-generator` does not support referencing types from JavaScript files.
+ * because the `.d.ts` bundler does not support referencing types from JavaScript files.
  *
  * To generate the TypeScript definitions, run:
  * npx tsc --allowJs --declaration --emitDeclarationOnly --outDir . --removeComments mrt.esm.js

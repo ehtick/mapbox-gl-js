@@ -2,7 +2,6 @@ import Scheduler from './scheduler';
 import assert from '../style-spec/util/assert';
 import {bindAll, isWorker} from './util';
 import {serialize, deserialize} from './web_worker_transfer';
-import '../types/worker';
 
 import type {Serialized} from './web_worker_transfer';
 import type {Transferable} from '../types/transferable';

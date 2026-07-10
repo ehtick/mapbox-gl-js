@@ -5,30 +5,6 @@ import * as DOM from '../../util/dom';
 import type {Map as MapboxMap, IControl, ControlPosition} from '../map';
 import type {FolderApi, FolderParams, BindingApi, BindingParams, ButtonApi} from '@tweakpane/core';
 
-interface FileSystemWritableFileStream {
-    write: (data: string) => Promise<void>;
-    close: () => Promise<void>;
-}
-
-interface FileSystemFileHandle {
-    createWritable: () => Promise<FileSystemWritableFileStream>;
-    getFile: () => Promise<File>;
-}
-
-interface FilePickerOptions {
-    types?: Array<{
-        description?: string;
-        accept: Record<string, string[]>;
-    }>;
-}
-
-declare global {
-    interface Window {
-        showSaveFilePicker?: (options?: FilePickerOptions) => Promise<FileSystemFileHandle>;
-        showOpenFilePicker?: (options?: FilePickerOptions) => Promise<FileSystemFileHandle[]>;
-    }
-}
-
 type Callback = (value?: unknown) => void;
 
 export type DevToolsFolder = {

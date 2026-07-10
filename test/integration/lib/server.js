@@ -39,14 +39,14 @@ export default function () {
 
     return {
         listen() {
-            return new Promise((resolve) => { server.listen(port, () => resolve()); });
+            return /** @type {Promise<void>} */(new Promise((resolve) => { server.listen(port, () => resolve()); }));
         },
 
         close() {
-            return new Promise((resolve, reject) => {
+            return /** @type {Promise<void>} */(new Promise((resolve, reject) => {
                 if (!server.listening) { resolve(); return; }
                 server.close((err) => { if (err) reject(err); else resolve(); });
-            });
+            }));
         },
 
         localizeURLs(style) {
