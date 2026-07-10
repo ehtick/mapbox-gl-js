@@ -4364,6 +4364,18 @@ export class Map extends Camera {
                 if (elevationSource && event.sourceCacheId === elevationSource.id && this.style) {
                     this.style._setLabelPlacementStale();
                 }
+                // Force a full label re-placement when a fill-extrusion (building)
+                // tile loads.  Symbol z-offsets are computed from building heights
+                // during placement, so if a building tile arrives after the initial
+                // placement pass (a common race when the symbol source is GeoJSON
+                // but buildings come from a separate vector tile source) the
+                // collision boxes and elevated symbol positions will be wrong.
+                // Re-running placement after the building data arrives ensures
+                // symbols appear at the correct elevation.
+                if (this.style && event.sourceCacheId &&
+                        this.style._buildingIndex.hasLayerForSourceCache(event.sourceCacheId)) {
+                    this.style._requestFullLabelPlacement();
+                }
                 this.painter.setTileLoadedFlag(true);
             }
         });

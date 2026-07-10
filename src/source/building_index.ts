@@ -114,6 +114,28 @@ class BuildingIndex {
         }
     }
 
+    /**
+     * Returns true if any building layer tracked by this index is backed by
+     * the source cache with the given `sourceCacheId`.  Used to detect when a
+     * fill-extrusion tile has finished loading so that a full label-placement
+     * pass can be requested: symbol z-offsets depend on building heights, so
+     * placement must re-run whenever new building data arrives.
+     *
+     * @param {string} sourceCacheId - The FQID of the source cache to check.
+     * @returns {boolean} `true` if a tracked building layer uses this cache.
+     * @example
+     * if (buildingIndex.hasLayerForSourceCache(event.sourceCacheId)) { ... }
+     */
+    hasLayerForSourceCache(sourceCacheId: string): boolean {
+        for (const {layer} of this.layers) {
+            const sourceCache = this.style.getLayerSourceCache(layer);
+            if (sourceCache && sourceCache.id === sourceCacheId) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     _mapCoordToOverlappingTile(
         tid: OverscaledTileID,
         x: number,
