@@ -68,7 +68,8 @@ import {
 import {getBuildingGenUrl} from '../../../src/util/config';
 import {
     BUILDING_VISIBLE,
-    BUILDING_HIDDEN_BY_REPLACEMENT
+    BUILDING_HIDDEN_BY_REPLACEMENT,
+    BUILDING_HIDDEN_WITH_INCOMPLETE_PARTS
 } from './building_bucket_flags';
 
 import type {OverscaledTileID, UnwrappedTileID, CanonicalTileID} from '../../../src/source/tile_id';
@@ -91,8 +92,6 @@ import type {ProjectionSpecification} from '../../../src/style-spec/types';
 import type {BucketWithGroundEffect} from '../../../src/render/draw_fill_extrusion';
 import type {AreaLight} from '../model';
 import type {NonPremultipliedRenderColor} from '../../../src/style-spec/util/color';
-
-const BUILDING_HIDDEN_WITH_INCOMPLETE_PARTS: number = 0x4;
 
 const MAX_INT_16 = 32767.0;
 
