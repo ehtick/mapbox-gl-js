@@ -73,6 +73,26 @@ function anyBucketRequiresStandard(buckets: Array<Bucket>): boolean {
     return false;
 }
 
+function symbolFrcCoverageForLayer(
+    frcCoverage: FrcCoverageParams | null,
+    tileSource: string,
+    sourceLayer: string,
+): {
+    applies: boolean;
+    frcMask: number | null;
+    polygons: FrcCoveragePolygons | null | undefined;
+    tileZoom: number | null | undefined;
+} {
+    const applies = frcCoverage != null && !!HD.matchesCoverageSourceLayer &&
+        HD.matchesCoverageSourceLayer(frcCoverage.sourceLayers, tileSource, sourceLayer);
+    return {
+        applies,
+        frcMask: applies && frcCoverage ? frcCoverage.frcMask : null,
+        polygons: applies && frcCoverage ? frcCoverage.polygons : null,
+        tileZoom: applies && frcCoverage ? frcCoverage.tileZoom : null,
+    };
+}
+
 class WorkerTile {
     tileID: OverscaledTileID;
     uid: number;
@@ -506,6 +526,8 @@ class WorkerTile {
                         const bucket = buckets[key];
                         if (bucket instanceof SymbolBucket) {
                             recalculateLayers(bucket.layers, this.zoom, options.brightness, availableImages, this.worldview, options.activeFloors);
+                            const layer = bucket.layers[0];
+                            const frc = symbolFrcCoverageForLayer(this.frcCoverage, this.source, layer.sourceLayer);
                             symbolLayoutData[key] = performSymbolLayout(
                                 bucket,
                                 glyphMap,
@@ -519,9 +541,9 @@ class WorkerTile {
                                 iconRasterizationTasks,
                                 this.worldview,
                                 availableImages,
-                                this.frcCoverage ? this.frcCoverage.frcMask : null,
-                                this.frcCoverage ? this.frcCoverage.polygons : null,
-                                this.frcCoverage ? this.frcCoverage.tileZoom : null,
+                                frc.frcMask,
+                                frc.polygons,
+                                frc.tileZoom,
                                 HD.isFeatureCoveredByFrcMask || null,
                                 HD.symbolAnchorInFrcCoverage || null);
                         }

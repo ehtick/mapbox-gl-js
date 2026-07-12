@@ -351,14 +351,19 @@ function updateLineLabels(bucket: SymbolBucket,
 
         let elevationParams: ElevationParams | null = null;
         if (hasElevation) {
-            const elevationFeature = renderElevatedRoads && bucket.hdExt ? bucket.hdExt.getElevationFeatureForPlacedSymbol(bucket, isText ? bucket.text : bucket.icon, s) : null;
-            elevationParams = {
-                getElevation,
-                elevation: tr.elevation,
-                elevationFeature
-            };
+            if (renderElevatedRoads && bucket.hdExt) {
+                const symbolBuffers = isText ? bucket.text : bucket.icon;
+                elevationParams = bucket.hdExt.makeRoadSymbolElevationParams(
+                    bucket, symbolBuffers, s, tileID, getElevation, tr.elevation, tr.projection, tr.center.lat, tr.worldSize);
+            } else {
+                elevationParams = {
+                    getElevation,
+                    elevation: tr.elevation,
+                    elevationFeature: null,
+                };
+            }
 
-            const [dx, dy, dz] = getElevation(tileAnchorPoint, tr.elevation, elevationFeature);
+            const [dx, dy, dz] = elevationParams.getElevation(tileAnchorPoint, tr.elevation, elevationParams.elevationFeature);
             x += dx;
             y += dy;
             z += dz;

@@ -218,8 +218,22 @@ function updateVariableAnchorsForBucket(bucket: SymbolBucket, rotateWithMap: boo
             let dx = 0, dy = 0, dz = 0;
             const renderElevatedRoads = bucket.elevationType === 'road';
             if (elevation || renderElevatedRoads) {
-                const elevationFeature = renderElevatedRoads && bucket.hdExt ? bucket.hdExt.getElevationFeatureForPlacedSymbol(bucket, bucket.text, s) : null;
-                const h = Elevation.getAtTileOffset(coord, new Point(tileAnchorX, tileAnchorY), elevation, elevationFeature);
+                const anchor = new Point(tileAnchorX, tileAnchorY);
+                let h = 0;
+                if (renderElevatedRoads && bucket.hdExt) {
+                    const symbolInstance = bucket.symbolInstances.get(bucket.text.symbolInstanceIndices[s]);
+                    if (bucket.hdExt.isCrossTileRoadElevation(symbolInstance.elevationFeatureIndex, coord.canonical)) {
+                        const roadHeight = bucket.hdExt.getRoadFeatureHeightForPlacedSymbol(
+                            bucket, bucket.text, s, anchor, coord.canonical);
+                        h = roadHeight !== null ? roadHeight : 0;
+                    } else {
+                        const elevationFeature = bucket.hdExt.getElevationFeatureForPlacedSymbol(bucket, bucket.text, s);
+                        h = Elevation.getAtTileOffset(coord, anchor, elevation,
+                            elevationFeature !== undefined ? elevationFeature : null);
+                    }
+                } else {
+                    h = Elevation.getAtTileOffset(coord, anchor, elevation, null);
+                }
                 const [ux, uy, uz] = projection.upVector(coord.canonical, tileAnchorX, tileAnchorY);
                 dx = h * ux * metersToTile;
                 dy = h * uy * metersToTile;

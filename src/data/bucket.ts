@@ -63,7 +63,7 @@ export type PopulateParameters = {
     scaleFactor: number;
     showElevationIdDebug: boolean;
     elevationFeatures: ElevationFeature[] | undefined;
-    /// Cross-source elevation registry (line layers only).
+    /// Cross-source elevation registry (line and symbol layers).
     elevationParams: ElevationParams | null | undefined;
     /// True when cross-source elevation is active for this style.
     crossSourceElevationEnabled: boolean;

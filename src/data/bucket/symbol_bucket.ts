@@ -1103,8 +1103,16 @@ class SymbolBucket implements Bucket {
 
         if (layout.get('symbol-elevation-reference') === 'hd-road-markup') {
             this.elevationType = 'road';
-            if (this.hdExt && options.elevationFeatures && options.elevationFeatures.length > 0) {
-                this.hdExt.addElevationFeatures(options.elevationFeatures);
+            if (this.hdExt) {
+                this.hdExt.configureCrossSource(
+                    canonical,
+                    options.elevationParams,
+                    options.crossSourceElevationEnabled,
+                    options.terrainEnabled,
+                );
+                if (options.elevationFeatures && options.elevationFeatures.length > 0) {
+                    this.hdExt.addElevationFeatures(options.elevationFeatures, canonical);
+                }
             }
         } else if (layout.get('symbol-z-elevate')) {
             this.elevationType = 'offset';

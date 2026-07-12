@@ -307,10 +307,12 @@ export type SymbolFeatureData = {
     isSDFIcon: boolean,
     iconTextFit: "none" | "width" | "height" | "both",
     iconOffset: [number, number],
+    iconAnchor: SymbolAnchor,
     iconCollisionBounds?: SymbolBoundingBox | null,
     iconVerticalCollisionBounds?: SymbolBoundingBox | null,
     textCollisionBounds?: SymbolBoundingBox | null,
-    textVerticalCollisionBounds?: SymbolBoundingBox | null
+    textVerticalCollisionBounds?: SymbolBoundingBox | null,
+    elevationFeatureIndex?: number,
 };
 
 export type SymbolBucketData = {
@@ -390,15 +392,28 @@ export function performSymbolLayout(bucket: SymbolBucket,
     const textSize = layout.get('text-size');
 
     let hasAnySecondaryIcon = false;
-    const featureData = [];
+    const featureData: SymbolFeatureData[] = [];
 
     const checkFrcCoverage = coverageFrcMask != null && coverageFrcMask !== 0;
     for (const feature of bucket.features) {
 
-        // Skip features covered by FRC mask (symbol-level filtering from fadeRange[0])
+        // Skip features covered by FRC mask (symbol-level filtering from fadeRange[0]).
+        // Only buckets whose source/source-layer are in sdCoverageSourceLayers receive a mask (see worker_tile).
         if (checkFrcCoverage && feature.properties && isFeatureCoveredByFrcMask &&
             isFeatureCoveredByFrcMask(feature.properties, coverageFrcMask)) {
             continue;
+        }
+
+        let elevationFeatureIndex = 0xffff;
+        if (bucket.hdExt && feature.properties && Object.hasOwn(feature.properties, PROPERTY_ELEVATION_ID)) {
+            const elevationFeatureId = +feature.properties[PROPERTY_ELEVATION_ID];
+            if (!Number.isNaN(elevationFeatureId)) {
+                const resolved = bucket.hdExt.resolveRoadElevation(feature, elevationFeatureId);
+                if (resolved === 'defer') {
+                    continue;
+                }
+                elevationFeatureIndex = resolved;
+            }
         }
 
         const fontstack = layout.get('text-font').evaluate(feature, {}, canonical).join(',');
@@ -591,12 +606,14 @@ export function performSymbolLayout(bucket: SymbolBucket,
             iconCollisionBounds: iconBBox,
             iconVerticalCollisionBounds: iconVerticalBBox,
             textCollisionBounds: textBBox,
-            textVerticalCollisionBounds: textVerticalBBox
+            textVerticalCollisionBounds: textVerticalBBox,
+            elevationFeatureIndex,
         });
 
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    if (bucket.hdExt) bucket.hdExt.clearWorkerState();
+
     return {featureData, sizes, hasAnySecondaryIcon, textAlongLine, symbolPlacement, coverageFrcMask, coveragePolygons, coverageTileZoom, isFeatureCoveredByFrcMask, symbolAnchorInFrcCoverage};
 
 }
@@ -881,7 +898,7 @@ export function postRasterizationSymbolLayout(bucket: SymbolBucket, bucketData: 
     for (const data of featureData) {
         const {shapedIcon, verticallyShapedIcon, feature, shapedTextOrientations, shapedText, layoutTextSize, layoutIconSize,
             textOffset, isSDFIcon, iconPrimary, iconSecondary, iconTextFit, iconOffset, iconCollisionBounds, iconVerticalCollisionBounds,
-            textCollisionBounds, textVerticalCollisionBounds} = data;
+            textCollisionBounds, textVerticalCollisionBounds, elevationFeatureIndex} = data;
 
         // Image positions in shapedIcon and shapedText need to be updated since after rasterization, positions in the atlas will have
         // changed
@@ -894,7 +911,7 @@ export function postRasterizationSymbolLayout(bucket: SymbolBucket, bucketData: 
             addFeature(bucket, feature, shapedTextOrientations, shapedIcon, verticallyShapedIcon, imageMap, sizes, layoutTextSize,
                 layoutIconSize, textOffset, isSDFIcon, availableImages, canonical, projection, brightness, hasAnySecondaryIcon, iconTextFit,
                 iconOffset, textAlongLine, symbolPlacement, iconCollisionBounds, iconVerticalCollisionBounds, textCollisionBounds, textVerticalCollisionBounds,
-                coverageFrcMask, coveragePolygons, coverageTileZoom, symbolAnchorInFrcCoverage);
+                coverageFrcMask, coveragePolygons, coverageTileZoom, symbolAnchorInFrcCoverage, elevationFeatureIndex);
         }
     }
 
@@ -1037,7 +1054,8 @@ function addFeature(bucket: SymbolBucket,
                     coverageFrcMask?: number | null,
                     coveragePolygons?: FrcCoveragePolygons | null,
                     coverageTileZoom?: number | null,
-                    symbolAnchorInFrcCoverage?: ((coveragePolygons: FrcCoveragePolygons, properties: Record<string, unknown>, anchor: Anchor, canonical: CanonicalTileID, coverageTileZoom: number | null) => boolean) | null) {
+                    symbolAnchorInFrcCoverage?: ((coveragePolygons: FrcCoveragePolygons, properties: Record<string, unknown>, anchor: Anchor, canonical: CanonicalTileID, coverageTileZoom: number | null) => boolean) | null,
+                    elevationFeatureIndex: number = 0xffff) {
     // To reduce the number of labels that jump around when zooming we need
     // to use a text-size value that is the same for all zoom levels.
     // bucket calculates text-size at a high zoom level so that all tiles can
@@ -1079,10 +1097,6 @@ function addFeature(bucket: SymbolBucket,
     if (bucket.hasAnyIconTextFit === false && hasIconTextFit) {
         bucket.hasAnyIconTextFit = true;
     }
-
-    const elevationFeatureId = feature.properties ? +feature.properties[PROPERTY_ELEVATION_ID] : null;
-    const elevationFeatureIdToIndex = bucket.hdExt ? bucket.hdExt.elevationFeatureIdToIndex : undefined;
-    const elevationFeatureIndex = elevationFeatureId && elevationFeatureIdToIndex ? elevationFeatureIdToIndex.get(elevationFeatureId) : 0xffff;
 
     const addSymbolAtAnchor = (line: Array<Point>, anchor: Anchor, canonicalId: CanonicalTileID) => {
         if (anchor.x < 0 || anchor.x >= EXTENT || anchor.y < 0 || anchor.y >= EXTENT) {

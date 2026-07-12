@@ -203,12 +203,20 @@ export class DefaultPlacementAlgorithm implements PlacementAlgorithm {
                 verticalTextFeatureIndex = collisionArrays.verticalTextFeatureIndex;
             }
 
-            const elevationFeature = bucket.hdExt ? bucket.hdExt.elevationFeatures[symbolInstance.elevationFeatureIndex] : undefined;
-
             const updateBoxData = (box: SingleCollisionBox) => {
                 box.tileID = placement.retainedQueryData[bucket.bucketInstanceId].tileID;
-                const elevation = placement.transform.elevation;
-                box.elevation = (elevationFromSea ? symbolZOffsetValue : symbolZOffsetValue + (Elevation.getAtTileOffset(box.tileID, new Point(box.tileAnchorX, box.tileAnchorY), elevation, elevationFeature)));
+                const terrainElevation = placement.transform.elevation;
+                if (bucket.elevationType === 'road') {
+                    // Road markup height is baked into symbolInstance.zOffset by updateRoadElevation.
+                    // Do not re-sample elevationFeature (wrong coordinate space for cross-source tiles).
+                    box.elevation = elevationFromSea ?
+                        symbolZOffsetValue :
+                        symbolZOffsetValue + Elevation.getAtTileOffset(
+                            box.tileID, new Point(box.tileAnchorX, box.tileAnchorY), terrainElevation, null);
+                } else {
+                    const elevationFeature = bucket.hdExt ? bucket.hdExt.elevationFeatures[symbolInstance.elevationFeatureIndex] : undefined;
+                    box.elevation = (elevationFromSea ? symbolZOffsetValue : symbolZOffsetValue + (Elevation.getAtTileOffset(box.tileID, new Point(box.tileAnchorX, box.tileAnchorY), terrainElevation, elevationFeature)));
+                }
                 box.elevation += symbolInstance.zOffset;
             };
 

@@ -1,10 +1,10 @@
 {
-  "_comment": "HD traffic lines and elevated incident symbols with cross-source elevation at zoom 17. Mix of tunnel and elevated-road incidents in view. Incident icons use viewport-aligned billboards (default icon-pitch/rotation-alignment; do not set map). SD traffic hidden in HD coverage area; SD roads hidden via hd_covered.",
+  "_comment": "Close-up of elevated-road incident symbol with cross-source HD elevation. Camera centered on elevated incident at z17.5 / pitch 60 (900px viewport).",
   "version": 8,
   "metadata": {
     "test": {
-      "width": 600,
-      "height": 600,
+      "width": 900,
+      "height": 900,
       "spriteFormat": "raster",
       "operations": [
         ["wait"],
@@ -16,10 +16,10 @@
       ]
     }
   },
-  "center": [13.27969, 52.50241],
-  "zoom": 17.0,
+  "center": [13.278151845985434, 52.50007056565926],
+  "zoom": 17.5,
   "bearing": -7.6,
-  "pitch": 50,
+  "pitch": 60,
   "lights": [
     {
       "id": "ambient",

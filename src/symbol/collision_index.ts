@@ -244,14 +244,19 @@ class CollisionIndex implements CollisionDetector {
         let {x: anchorX, y: anchorY, z: anchorZ} = projection.projectTilePoint(tileUnitAnchorPoint.x, tileUnitAnchorPoint.y, tileID.canonical);
         let elevationParams: symbolProjection.ElevationParams | null = null;
         if (hasElevation) {
-            const elevationFeature = renderElevatedRoads && bucket.hdExt ? bucket.hdExt.getElevationFeatureForPlacedSymbol(bucket, bucket.text, symbolIndex) : null;
-            elevationParams = {
-                getElevation,
-                elevation,
-                elevationFeature
-            };
+            if (renderElevatedRoads && bucket.hdExt) {
+                elevationParams = bucket.hdExt.makeRoadSymbolElevationParams(
+                    bucket, bucket.text, symbolIndex, tileID, getElevation, elevation, projection,
+                    this.transform.center.lat, this.transform.worldSize);
+            } else {
+                elevationParams = {
+                    getElevation,
+                    elevation,
+                    elevationFeature: null,
+                };
+            }
 
-            const [dx, dy, dz] = getElevation(tileAnchorPoint, elevation, elevationFeature);
+            const [dx, dy, dz] = elevationParams.getElevation(tileAnchorPoint, elevation, elevationParams.elevationFeature);
             anchorX += dx;
             anchorY += dy;
             anchorZ += dz;
@@ -326,7 +331,7 @@ class CollisionIndex implements CollisionDetector {
                         const point = index < firstLen - 1 ? first.tilePath[firstLen - 1 - index] : last.tilePath[index - firstLen + 2];
                         assert(point);
                         assert(elevationParams);
-                        z = getElevation(point, elevation, elevationParams.elevationFeature)[2];
+                        z = elevationParams.getElevation(point, elevation, elevationParams.elevationFeature)[2];
                     }
                     return symbolProjection.project(x, y, z, labelToScreenMatrix);
                 });
