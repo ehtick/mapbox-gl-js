@@ -3625,8 +3625,7 @@ export class Map extends Camera {
      * Returns the imported style schema.
      *
      * @param {string} importId The name of the imported style (e.g. `basemap`).
-     * @returns {*} Returns the imported style schema.
-     * @private
+     * @returns {SchemaSpecification} Returns the imported style schema, if exists.
      *
      * @example
      * map.getSchema('basemap');
@@ -3641,7 +3640,6 @@ export class Map extends Camera {
      * @param {string} importId The name of the imported style (e.g. `basemap`).
      * @param {SchemaSpecification} schema The imported style schema.
      * @returns {Map} Returns itself to allow for method chaining.
-     * @private
      *
      * @example
      * map.setSchema('basemap', {lightPreset: {type: 'string', default: 'night', values: ['day', 'night']}});
