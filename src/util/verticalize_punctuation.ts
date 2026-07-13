@@ -84,8 +84,6 @@ export const verticalizedCharacterMap = {
     '｡': '︒',
     '｢': '﹁',
     '｣': '﹂',
-    '←': '↑',
-    '→': '↓'
 } as const;
 
 export default function verticalizePunctuation(input: string, skipContextChecking: boolean): string {

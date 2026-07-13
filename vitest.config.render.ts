@@ -35,8 +35,8 @@ const browser = browsers[renderBrowser === 'safari' ? 'webkit' : renderBrowser];
 
 export default mergeConfig(baseConfig, defineConfig({
     define: {
-        'import.meta.env.VITE_CI': isCI,
-        'import.meta.env.VITE_UPDATE': process.env.UPDATE != null,
+        'import.meta.env.VITE_CI': JSON.stringify(String(isCI)),
+        'import.meta.env.VITE_UPDATE': JSON.stringify(String(process.env.UPDATE === 'true')),
         'import.meta.env.VITE_SPRITE_FORMAT': process.env.SPRITE_FORMAT != null ? JSON.stringify(process.env.SPRITE_FORMAT) : null,
         'import.meta.env.VITE_DIST_BUNDLE': JSON.stringify(bundle),
     },

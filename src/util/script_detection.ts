@@ -285,14 +285,54 @@ export function needsRotationInVerticalMode(char: number): boolean {
     // This proposal suggests changes that slightly differ from current web rendering behavior.
     // Since it is still in draft status, we currently adhere to web rendering results.
     // To ensure compatibility, only those commonly accepted as rotated in vertical mode are marked as such.
-    if (char === 0x3018 || char === 0x3019 || char === 0x301C) {
+    if (char === 0x3013 /* geta mark */ ||
+        char === 0x3018 /* left white tortoise shell bracket */ ||
+        char === 0x3019 /* right white tortoise shell bracket */ ||
+        char === 0x301C /* wave dash */) {
         return true;
     }
 
     // Katakana range
-    if (char === 0x30FC || char === 0x30A0) {
+    if (char === 0x30A0 /* katakana-hiragana double hyphen */ ||
+        char === 0x30FC /* katakana-hiragana prolonged sound mark */) {
         return true;
     }
+
+    // Basic directional arrows (U+2190–U+2193)
+    // ← and → were previously substituted to ↑ and ↓ via verticalize_punctuation.ts;
+    // rotation produces the same visual result (rotating ← 90° CW = ↑ appearance),
+    // so the substitution was removed in favour of handling all four here.
+    if (char >= 0x2190 /* leftwards arrow */ && char <= 0x2193 /* downwards arrow */) {
+        return true;
+    }
+
+    // General Punctuation — horizontal dashes and leaders defined in Shift JIS 2-byte code
+    if (char === 0x2010 /* hyphen */ ||
+        char === 0x2015 /* horizontal bar */ ||
+        char === 0x2025 /* two dot leader */) {
+        return true;
+    }
+
+    // Mathematical Operators
+    if (char === 0x2225 /* parallel to */) {
+        return true;
+    }
+
+    // Box Drawing characters — the whole block rotates so lines connect correctly in vertical labels
+    if (char >= 0x2500 /* box drawings light horizontal */ && char <= 0x254B /* box drawings heavy vertical and horizontal */) {
+        return true;
+    }
+
+    // Halfwidth and Fullwidth Forms — characters defined in Shift JIS 2-byte code that should rotate
+    if (char === 0xFF0E /* fullwidth full stop */ ||
+        char === 0xFF1D /* fullwidth equals sign */ ||
+        char === 0xFF5E /* fullwidth tilde */) {
+        return true;
+    }
+    if (char === 0xFFE3 /* fullwidth macron */) {
+        return true;
+    }
+
     return false;
 }
 
