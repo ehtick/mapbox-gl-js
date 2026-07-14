@@ -1,0 +1,35 @@
+{
+    "network": [
+        [
+            "probeNetwork - default - end",
+            1,
+            255
+        ],
+        [
+            "probeNetwork - default - start",
+            0,
+            0
+        ]
+    ],
+    "gfx": [
+        [
+            "probeGFX - default - end",
+            2,
+            3,
+            6,
+            1,
+            [
+                30500,
+                30500
+            ],
+            [
+                196716,
+                196716
+            ],
+            [
+                576,
+                576
+            ]
+        ]
+    ]
+}
