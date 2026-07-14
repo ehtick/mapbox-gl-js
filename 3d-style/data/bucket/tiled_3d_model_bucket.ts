@@ -737,7 +737,7 @@ function computePartPbrTable(nodeInfo: Tiled3dModelFeature, zMin: number, zMax: 
 // V1 and V2 tiles pack featureColor and partId in opposite halves of the 32-bit
 // feature value. In V2, meshopt compression forces values below 2^24, so colors
 // go in the lower 16 bits and part ids in the next nibble up.
-function buildMeshFeatureArray(mesh: Mesh, nodeInfo: Tiled3dModelFeature, colorShift: number, idShift: number, doorLightChanged: boolean) {
+function buildMeshFeatureArray(mesh: Mesh, nodeInfo: Tiled3dModelFeature, colorShift: number, idShift: number, doorLightChanged: boolean, isLodMesh: boolean) {
     if (!mesh.featureData) return;
     const featureArray = mesh.featureArray = new FeatureVertexArray();
     featureArray.reserveExact(mesh.featureData.length);
@@ -764,9 +764,14 @@ function buildMeshFeatureArray(mesh: Mesh, nodeInfo: Tiled3dModelFeature, colorS
             g = lerp(g, t[o + 1], mixA);
             b = lerp(b, t[o + 2], mixA);
         }
-        r *= a;
-        g *= a;
-        b *= a;
+        // Only LOD meshes (authored by the newer tiler) encode baked ambient occlusion in the
+        // vertex color alpha channel. The non-LOD mesh may have any alpha value, even 0, so
+        // applying the AO factor there would incorrectly darken the color, potentially to black.
+        if (isLodMesh) {
+            r *= a;
+            g *= a;
+            b *= a;
+        }
 
         const a0 = (r << 8) | g;
         const a1 = (b << 8) | t[o + 4];
@@ -799,14 +804,14 @@ function updateNodeFeatureVertices(nodeInfo: Tiled3dModelFeature, doorLightChang
 
     for (let i = 0; i < node.meshes.length; i++) {
         if (!(node.lights && node.lightMeshIndex === i)) {
-            buildMeshFeatureArray(node.meshes[i], nodeInfo, colorShift, idShift, doorLightChanged);
+            buildMeshFeatureArray(node.meshes[i], nodeInfo, colorShift, idShift, doorLightChanged, false);
         }
     }
 
     // LOD meshes share the same feature vertex data but have no lights.
     if (node.lodMeshes) {
         for (const mesh of node.lodMeshes) {
-            buildMeshFeatureArray(mesh, nodeInfo, colorShift, idShift, false);
+            buildMeshFeatureArray(mesh, nodeInfo, colorShift, idShift, false, true);
         }
     }
 }
