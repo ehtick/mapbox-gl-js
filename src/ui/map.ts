@@ -4214,6 +4214,24 @@ export class Map extends Camera {
     }
 
     /**
+     * Resets all feature state within a featureset or a style layer, setting every feature back
+     * to its default (stateless) behavior. This is the bulk equivalent of calling
+     * {@link Map#removeFeatureState} with only a source selector.
+     *
+     * @param {TargetDescriptor} target The featureset or layer whose feature states should be reset.
+     * Pass `{featuresetId, importId?}` to target a named featureset (optionally inside a style
+     * import), or `{layerId}` to target a specific root-style layer.
+     * @returns {Map} The map object.
+     * @example
+     * // Reset all feature state on the 'poi' featureset inside the 'basemap' import
+     * map.resetFeatureStates({featuresetId: 'poi', importId: 'basemap'});
+     */
+    resetFeatureStates(target: TargetDescriptor): this {
+        this.style.resetFeatureStates(target);
+        return this._update();
+    }
+
+    /**
      * *This API is experimental and subject to change in future versions*.
      *
      * @experimental

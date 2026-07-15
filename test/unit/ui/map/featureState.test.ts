@@ -428,4 +428,108 @@ describe('Map#featureState', () => {
             });
         });
     });
+
+    describe('#resetFeatureStates', () => {
+        test('clears all feature state for a GeoJSON source layer', async () => {
+            const map = createMap({
+                style: {
+                    "version": 8,
+                    "sources": {
+                        "geojson": createStyleSource()
+                    },
+                    "layers": [
+                        {"id": "my-layer", "type": "circle", "source": "geojson"}
+                    ]
+                }
+            });
+            await waitFor(map, "load");
+            map.setFeatureState({source: 'geojson', id: 1}, {hover: true});
+            map.setFeatureState({source: 'geojson', id: 2}, {hover: true, selected: true});
+            map.resetFeatureStates({layerId: 'my-layer'});
+            expect(map.getFeatureState({source: 'geojson', id: 1})).toEqual({});
+            expect(map.getFeatureState({source: 'geojson', id: 2})).toEqual({});
+        });
+
+        test('clears all feature state for a root-level featureset', async () => {
+            const map = createMap({
+                style: {
+                    "version": 8,
+                    "sources": {
+                        "geojson": createStyleSource()
+                    },
+                    "layers": [
+                        {"id": "my-layer", "type": "circle", "source": "geojson"}
+                    ],
+                    "featuresets": {
+                        "my-featureset": {
+                            "selectors": [{"layer": "my-layer"}]
+                        }
+                    }
+                }
+            });
+            await waitFor(map, "load");
+            map.setFeatureState({source: 'geojson', id: 1}, {hover: true});
+            map.setFeatureState({source: 'geojson', id: 2}, {selected: true});
+            map.resetFeatureStates({featuresetId: 'my-featureset'});
+            expect(map.getFeatureState({source: 'geojson', id: 1})).toEqual({});
+            expect(map.getFeatureState({source: 'geojson', id: 2})).toEqual({});
+        });
+
+        test('fires an error if layerId does not exist', async () => {
+            const map = createMap({
+                style: {
+                    "version": 8,
+                    "sources": {
+                        "geojson": createStyleSource()
+                    },
+                    "layers": []
+                }
+            });
+            await waitFor(map, "load");
+            await new Promise(resolve => {
+                map.on('error', ({error}) => {
+                    expect(error.message).toMatch(/does not exist/);
+                    resolve();
+                });
+                map.resetFeatureStates({layerId: 'nonexistent-layer'});
+            });
+        });
+
+        test('fires an error if featuresetId does not exist', async () => {
+            const map = createMap({
+                style: {
+                    "version": 8,
+                    "sources": {
+                        "geojson": createStyleSource()
+                    },
+                    "layers": []
+                }
+            });
+            await waitFor(map, "load");
+            await new Promise(resolve => {
+                map.on('error', ({error}) => {
+                    expect(error.message).toMatch(/does not exist/);
+                    resolve();
+                });
+                map.resetFeatureStates({featuresetId: 'nonexistent-featureset'});
+            });
+        });
+
+        test('throws before loaded', () => {
+            const map = createMap({
+                style: {
+                    "version": 8,
+                    "sources": {
+                        "geojson": createStyleSource()
+                    },
+                    "layers": [
+                        {"id": "my-layer", "type": "circle", "source": "geojson"}
+                    ]
+                }
+            });
+            expect(() => {
+                map.resetFeatureStates({layerId: 'my-layer'});
+            }).toThrow();
+        });
+    });
 });

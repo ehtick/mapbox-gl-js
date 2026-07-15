@@ -3553,6 +3553,28 @@ class Style extends Evented<MapEvents> {
         return sourceCaches[0].getFeatureState(sourceLayer, target.id);
     }
 
+    resetFeatureStates(target: TargetDescriptor) {
+        this._checkLoaded();
+
+        if ('featuresetId' in target) {
+            const {featuresetId, importId} = target;
+            const fragment = this.getFragmentStyle(importId);
+            if (!fragment) return;
+            const layers = fragment.getFeaturesetLayers(featuresetId);
+            for (const {source, sourceLayer} of layers) {
+                fragment.removeFeatureState({source, sourceLayer});
+            }
+        } else {
+            const {layerId} = target;
+            const layer = this.getLayer(layerId);
+            if (!layer) {
+                this.fire(new ErrorEvent(new Error(`The layer '${layerId}' does not exist in the map's style and cannot be used to reset feature states.`)));
+                return;
+            }
+            this.removeFeatureState({source: layer.source, sourceLayer: layer.sourceLayer});
+        }
+    }
+
     setTransition(transition?: TransitionSpecification | null): Style {
         this.stylesheet.transition = {...this.stylesheet.transition, ...transition};
         this.transition = this.stylesheet.transition;

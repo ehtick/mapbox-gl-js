@@ -597,6 +597,11 @@ if (feature5.id) {
 const feature6 = features6[0];
 map.removeFeatureState(feature6);
 
+// resetFeatureStates
+map.resetFeatureStates({featuresetId: 'poi', importId: 'basemap'}) satisfies mapboxgl.Map;
+map.resetFeatureStates({featuresetId: 'poi'}) satisfies mapboxgl.Map;
+map.resetFeatureStates({layerId: 'buildings'}) satisfies mapboxgl.Map;
+
 //
 // EasingOptions, CameraOptions, AnimationOptions
 //
