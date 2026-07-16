@@ -7,7 +7,7 @@
       "width": 256,
       "collisionDebug": true,
       "skip-test": [
-        {"platform-tag-contains": "web", "reason": "Doesn't work correctly"},
+        {"platform-tag-contains": "web", "reason": "At the moment we don't support this combination and act as if there is no `text-variable-anchor`"},
         {"platform-tag-contains": "native", "reason": "At the moment we don't support this combination and act as if there is no `text-variable-anchor`"}
       ]
     }

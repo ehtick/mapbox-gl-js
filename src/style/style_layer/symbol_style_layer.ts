@@ -106,6 +106,16 @@ class SymbolStyleLayer extends StyleLayer {
             });
         }
 
+        if (this.appearances.length !== 0) {
+            // When text-variable-anchor is present, a proper unified bbox for appearances would be very large as it
+            // needs to cover texts for all appearances for all anchors.
+            // A better solution might be to have a separate bbox for each anchor, but it requires significant changes
+            // in stored data and placement logic.
+            // For now we disable text-variable-anchor when appearances are present.
+            // Deleting it here makes it use the default value
+            delete this.layout._values['text-variable-anchor'];
+        }
+
         if (this.layout.get('icon-rotation-alignment') === 'auto') {
             if (this.layout.get('symbol-placement') !== 'point') {
                 this.layout._values['icon-rotation-alignment'] = 'map';
