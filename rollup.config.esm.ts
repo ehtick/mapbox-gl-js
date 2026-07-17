@@ -59,7 +59,7 @@ function esmConfig(dir: string, workerSuffix: string, emitVisualizer = false): R
         preserveEntrySignatures: 'strict',
         plugins: [
             esmSubstitutions(workerSuffix),
-            ...plugins({production, minified, test: false, keepClassNames: false, mode: BUILD, format: 'esm'}),
+            ...plugins({production, minified, test: false, keepClassNames: false, format: 'esm'}),
             emitVisualizer && visualizer({
                 filename: `${dir}treemap.html`,
                 template: 'treemap',

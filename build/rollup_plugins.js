@@ -15,7 +15,6 @@ import minifyStyleSpec from './rollup_plugin_minify_style_spec.js';
  * builds (umd and esm mapboxgl bundles, style-spec package bundle)
  *
  * @param {Object} options
- * @param {string | 'dev' | 'production'} [options.mode] - build mode
  * @param {'umd' | 'csp' | 'esm'} [options.format] - bundle format, reported as `bundleFormat` in telemetry
  * @param {boolean} [options.minified] - whether to minify the output
  * @param {boolean} [options.production] - whether this is a production build
@@ -23,7 +22,7 @@ import minifyStyleSpec from './rollup_plugin_minify_style_spec.js';
  * @param {boolean} [options.keepClassNames] - whether to keep class names during minification
  * @returns {import('rollup').InputPluginOption[]}
  */
-export const plugins = ({mode, format, minified, production, test, keepClassNames}) => [
+export const plugins = ({format, minified, production, test, keepClassNames}) => [
     minifyStyleSpec(),
     esbuild({
         target: browserslistToEsbuild(),
@@ -31,7 +30,7 @@ export const plugins = ({mode, format, minified, production, test, keepClassName
         sourceMap: true,
         tsconfig: './tsconfig.browser.json',
         define: {
-            'import.meta.env': JSON.stringify({mode, format}),
+            'import.meta.env': JSON.stringify({format}),
         }
     }),
     json({

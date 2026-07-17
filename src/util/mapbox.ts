@@ -80,9 +80,7 @@ export class RequestManager {
     normalizeStyleURL(url: string, accessToken?: string): string {
         if (!isMapboxURL(url)) return url;
         const urlObject = parseUrl(url);
-        if (import.meta.env.mode !== 'dev') {
-            urlObject.params.push(`sdk=js-${sdkVersion}`);
-        }
+        urlObject.params.push(`sdk=js-${sdkVersion}`);
         urlObject.path = `/styles/v1${urlObject.path}`;
         return this._makeAPIURL(urlObject, this._customAccessToken || accessToken);
     }
