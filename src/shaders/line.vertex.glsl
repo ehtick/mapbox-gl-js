@@ -47,6 +47,11 @@ uniform float u_width_scale;
 // in that case the value is passed as a vertex attribute instead of a uniform.
 uniform float u_z_offset;
 
+// Elevated-road VLW carpet: 0.5 m view-depth pull toward camera (0 when disabled).
+// Always declared so GL locations resolve on all line program variants.
+uniform highp float u_road_view_depth_bias;
+uniform highp vec4 u_road_clip_to_view; // a,b,c,d for view = (a*z+b)/(c*z+d)
+
 #ifdef RENDER_LINE_CURVE
 // Encodes curve control points in 3x3 matrices for x, y, z
 // Note: Could be replaced with an uniform array once Metal support is implemented
@@ -413,6 +418,25 @@ void main() {
     v_tile_pos = (v_tile_pos + extrude) / EXTENT;
 #ifdef ELEVATED_ROADS
     gl_Position = gl_Position + projected_extrude;
+#ifdef VARIABLE_LINE_WIDTH
+#ifndef ELEVATED
+    // Depth-only pull toward camera (xy/w unchanged — no world-Z float).
+    // Cap: 0.5 m in view/camera Z (same units as feature cutout). OpenGL view Z is
+    // negative; +bias = toward camera. Matches route cutout depth margin.
+    if (u_road_view_depth_bias > 0.0) {
+        highp float z_in = gl_Position.z / gl_Position.w * 0.5 + 0.5;
+        highp float a = u_road_clip_to_view.x;
+        highp float b = u_road_clip_to_view.y;
+        highp float c = u_road_clip_to_view.z;
+        highp float d = u_road_clip_to_view.w;
+        highp float view = (a * z_in + b) / (c * z_in + d);
+        highp float view_new = view + u_road_view_depth_bias;
+        highp float z_new = (view_new * d - b) / (a - view_new * c);
+        z_new = clamp(z_new, 0.0, 1.0);
+        gl_Position.z = (z_new * 2.0 - 1.0) * gl_Position.w;
+    }
+#endif // ELEVATED
+#endif // VARIABLE_LINE_WIDTH
 #else
     gl_Position = mix(gl_Position + projected_extrude, AWAY, hidden);
 #endif
