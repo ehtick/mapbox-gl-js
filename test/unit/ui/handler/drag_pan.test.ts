@@ -628,3 +628,94 @@ test('Dragging to the left', async () => {
     expect(equalWithPrecision(-35.15596, lng, 0.001)).toBeTruthy();
     expect(equalWithPrecision(-0.00029, lat, 0.001)).toBeTruthy();
 });
+
+test('TouchPanHandler keeps the drag alive when a camera setter is called from a drag handler', () => {
+    const map = createMap();
+    const target = map.getCanvas();
+
+    let dragCount = 0;
+    map.on('drag', () => {
+        dragCount++;
+        map.setPitch(map.getPitch() + 1);
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    simulate.touchstart(target, {touches: [constructTouch(target, {target, identifier: 1, clientX: 0, clientY: 0})]});
+    map._renderTaskQueue.run();
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    simulate.touchmove(target, {touches: [constructTouch(target, {target, identifier: 1, clientX: 0, clientY: 10})]});
+    map._renderTaskQueue.run();
+    expect(dragCount).toBe(1);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    simulate.touchmove(target, {touches: [constructTouch(target, {target, identifier: 1, clientX: 0, clientY: 20})]});
+    map._renderTaskQueue.run();
+    expect(dragCount).toBe(2);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    simulate.touchend(target);
+    map._renderTaskQueue.run();
+
+    map.remove();
+});
+
+test('DragPanHandler keeps the drag alive when a camera setter is called from a drag handler (GLJS-1102)', () => {
+    const map = createMap();
+
+    let dragCount = 0;
+    map.on('drag', () => {
+        dragCount++;
+        map.setPitch(map.getPitch() + 1);
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    simulate.mousedown(map.getCanvas());
+    map._renderTaskQueue.run();
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    simulate.mousemove(window.document, {buttons, clientX: 10, clientY: 10});
+    map._renderTaskQueue.run();
+    expect(dragCount).toBe(1);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    simulate.mousemove(window.document, {buttons, clientX: 20, clientY: 20});
+    map._renderTaskQueue.run();
+    expect(dragCount).toBe(2);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    simulate.mouseup(window.document);
+    map._renderTaskQueue.run();
+
+    map.remove();
+});
+
+test('map.stop() ends an in-progress drag even while the pointer is still down', () => {
+    const map = createMap();
+
+    const drag = vi.fn();
+    map.on('drag', drag);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    simulate.mousedown(map.getCanvas());
+    map._renderTaskQueue.run();
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    simulate.mousemove(window.document, {buttons, clientX: 10, clientY: 10});
+    map._renderTaskQueue.run();
+    expect(drag).toHaveBeenCalledTimes(1);
+
+    // The public stop() uses keepGesture 'never' and tears down even a live gesture.
+    map.stop();
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    simulate.mousemove(window.document, {buttons, clientX: 20, clientY: 20});
+    map._renderTaskQueue.run();
+    expect(drag).toHaveBeenCalledTimes(1);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    simulate.mouseup(window.document);
+    map._renderTaskQueue.run();
+
+    map.remove();
+});

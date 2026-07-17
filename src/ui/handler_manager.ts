@@ -41,6 +41,8 @@ export type HandlerManagerOptions = {
     pitchRotateKey?: PitchRotateKey;
 };
 
+export type KeepGesture = 'always' | 'ifPointerDown' | 'never';
+
 type EventsInProgress = {
     [T in keyof MapEvents]?: MapEvents[T];
 };
@@ -126,6 +128,12 @@ class HandlerManager {
     _dragOrigin: vec3 | null | undefined;
     _originalZoom: number | null | undefined;
 
+    // Whether a pointer is currently physically down.
+    // Used to avoid tearing down an in-progress gesture when a soft camera update (jumpTo/easeTo/flyTo)
+    // is called while the user is still dragging.
+    _mouseBeingPressed: boolean;
+    _activeTouchCount: number;
+
     constructor(map: Map, options: HandlerManagerOptions) {
         this._map = map;
         this._el = this._map.getCanvasContainer();
@@ -138,6 +146,8 @@ class HandlerManager {
         this._previousActiveHandlers = {};
         this._trackingEllipsoid = new TrackingEllipsoid();
         this._dragOrigin = null;
+        this._mouseBeingPressed = false;
+        this._activeTouchCount = 0;
 
         // Track whether map is currently moving, to compute start/move/end events
         this._eventsInProgress = {};
@@ -259,15 +269,17 @@ class HandlerManager {
         this._handlersById[handlerName] = handler;
     }
 
-    stop(allowEndAnimation: boolean) {
+    stop(keepGesture: KeepGesture = 'never') {
         // do nothing if this method was triggered by a gesture update
         if (this._updatingCamera) return;
+
+        if (keepGesture === 'always' || (keepGesture === 'ifPointerDown' && this._isPointerDown())) return;
 
         for (const {handler} of this._handlers) {
             handler.reset();
         }
         this._inertia.clear();
-        this._fireEvents({}, {}, allowEndAnimation);
+        this._fireEvents({}, {}, false);
         this._changes = [];
         this._originalZoom = undefined;
     }
@@ -326,7 +338,43 @@ class HandlerManager {
         return mapTouches as unknown as TouchList;
     }
 
+    // Track raw physical pointer state from the DOM events
+    _updatePointerLiveness(e: InputEvent | RenderFrameEvent) {
+        switch (e.type) {
+        case 'mousedown':
+            this._mouseBeingPressed = true;
+            break;
+        case 'mousemove':
+            // A mousemove with no buttons held means the press was released
+            // outside the window/iframe and no mouseup was delivered.
+            if ((e as MouseEvent).buttons === 0) {
+                this._mouseBeingPressed = false;
+            }
+            break;
+        case 'mouseup':
+            this._mouseBeingPressed = false;
+            break;
+        case 'touchstart':
+        case 'touchmove':
+        case 'touchend':
+        case 'touchcancel':
+            this._activeTouchCount = (e as TouchEvent).touches ? (e as TouchEvent).touches.length : 0;
+            break;
+        case 'blur':
+            this._mouseBeingPressed = false;
+            this._activeTouchCount = 0;
+            break;
+        }
+    }
+
+    // Whether the user is still physically holding a pointer down (mouse or touch).
+    // Helps avoid an in-progress gesture being torn down unexpectedly.
+    _isPointerDown(): boolean {
+        return this._mouseBeingPressed || this._activeTouchCount > 0;
+    }
+
     handleEvent(e: InputEvent | RenderFrameEvent, eventName?: string) {
+        this._updatePointerLiveness(e);
         this._updatingCamera = true;
         assert(e.timeStamp !== undefined);
 
@@ -384,7 +432,7 @@ class HandlerManager {
         }
 
         if (Object.keys(activeHandlers).length || hasChange(mergedHandlerResult)) {
-            this._map._stop(true);
+            this._map._stop({keepGesture: 'always'});
         }
 
         this._updatingCamera = false;
@@ -478,7 +526,7 @@ class HandlerManager {
         }
 
         // Catches double click and double tap zooms when camera is constrained over terrain
-        if (tr._isCameraConstrained) map._stop(true);
+        if (tr._isCameraConstrained) map._stop({keepGesture: 'always'});
 
         if (!hasChange(combinedResult)) {
             this._fireEvents(combinedEventsInProgress, deactivatedHandlers, true);
@@ -509,7 +557,7 @@ class HandlerManager {
         tr.cameraElevationReference = "sea";
 
         // stop any ongoing camera animations (easeTo, flyTo)
-        map._stop(true);
+        map._stop({keepGesture: 'always'});
 
         around = around || map.transform.centerPoint;
         if (bearingDelta) tr.bearing += bearingDelta;

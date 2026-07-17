@@ -31,6 +31,7 @@ import {getZoomAdjustment} from '../geo/projection/adjustments';
 import type Tile from '../source/tile';
 import type Transform from '../geo/transform';
 import type HandlerManager from './handler_manager';
+import type {KeepGesture} from './handler_manager';
 import type {TaskID} from '../util/task_queue';
 import type {Callback} from '../types/callback';
 import type {MapEvents} from './events';
@@ -1103,7 +1104,9 @@ class Camera extends Evented<MapEvents> {
      * @see [Example: Update a feature in realtime](https://docs.mapbox.com/mapbox-gl-js/example/live-update-feature/)
      */
     jumpTo(options: CameraOptions & {preloadOnly?: AnimationOptions['preloadOnly']}, eventData?: EventData): this {
-        this.stop();
+        // a camera setter (setCenter/setPitch/…) called from within a 'drag'/'move' handler
+        // must not tear down the gesture the user is still performing.
+        this._stop({keepGesture: 'ifPointerDown'});
 
         const tr = options.preloadOnly ? this.transform.clone() : this.transform;
         let zoomChanged = false,
@@ -1325,7 +1328,9 @@ class Camera extends Evented<MapEvents> {
         },
         eventData?: EventData,
     ): this {
-        this._stop(false, options.easeId);
+        this._stop({
+            easeId: options.easeId
+        });
 
         options = {offset: [0, 0],
             duration: 500,
@@ -1777,7 +1782,24 @@ class Camera extends Evented<MapEvents> {
     // No-op in the Camera class, implemented by the Map class
     _cancelRenderFrame(_: TaskID): void {}
 
-    _stop(allowGestures?: boolean, easeId?: string): this {
+    // Cancels any running camera animation.
+    // `keepGesture` controls whether to keep a gesture that is currently in progress or not:
+    // - 'never' (default behavior):
+    //      Never keep the gesture.
+    //      Used in `stop`.
+    // - 'always':
+    //      Always keep the gesture.
+    //      Used when only want to cancel any animation.
+    // - 'ifPointerDown':
+    //      Keep the gesture only if a pointer is still physically down (see `_isPointerDown` in `HandlerManager`).
+    //      Possible use case: when `jumpTo` called from inside a drag/move handler, do not kill the drag the user is still performing.
+    _stop({
+        easeId,
+        keepGesture
+    }: {
+        easeId?: string;
+        keepGesture?: KeepGesture;
+    } = {}): this {
         if (this._easeFrameId) {
             this._cancelRenderFrame(this._easeFrameId);
             this._easeFrameId = undefined;
@@ -1792,10 +1814,10 @@ class Camera extends Evented<MapEvents> {
             this._onEaseEnd = undefined;
             onEaseEnd.call(this, easeId);
         }
-        if (!allowGestures) {
-            const handlers = this.handlers;
-            if (handlers) handlers.stop(false);
-        }
+
+        const handlers = this.handlers;
+        if (handlers) handlers.stop(keepGesture);
+
         return this;
     }
 
