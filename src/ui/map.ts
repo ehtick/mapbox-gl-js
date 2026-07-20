@@ -38,6 +38,7 @@ import webpSupported from '../util/webp_supported';
 import {PerformanceUtils, PerformanceMarkers} from '../util/performance';
 import {LivePerformanceMarkers, LivePerformanceUtils} from '../util/live_performance';
 import EasedVariable from '../util/eased_variable';
+import {prepareDebug} from '../../modules/debug';
 import {GLOBE_ZOOM_THRESHOLD_MAX} from '../geo/projection/globe_constants';
 import {setCacheLimits} from '../util/tile_request_cache';
 import {Debug} from '../util/debug';
@@ -5139,6 +5140,8 @@ export class Map extends Camera {
     set showTileBoundaries(value: boolean) {
         if (this._showTileBoundaries === value) return;
         this._showTileBoundaries = value;
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        if (value) prepareDebug();
         this._update();
     }
 
@@ -5265,6 +5268,8 @@ export class Map extends Camera {
     set showPadding(value: boolean) {
         if (this._showPadding === value) return;
         this._showPadding = value;
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        if (value) prepareDebug();
         this._update();
     }
 
@@ -5283,6 +5288,8 @@ export class Map extends Camera {
     set showCollisionBoxes(value: boolean) {
         if (this._showCollisionBoxes === value) return;
         this._showCollisionBoxes = value;
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        if (value) prepareDebug();
         if (this.style && value) {
             // When we turn collision boxes on we have to generate them for existing tiles
             // When we turn them off, there's no cost to leaving existing boxes in place

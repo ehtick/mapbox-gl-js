@@ -12,7 +12,7 @@ import Terrain, {DrapeRenderMode} from './terrain';
 import Fog from './fog';
 import Snow from './snow';
 import Rain from './rain';
-import {pick, clone, deepEqual, filterObject, cartesianPositionToSpherical, warnOnce} from '../util/util';
+import {clone, deepEqual, filterObject, cartesianPositionToSpherical, warnOnce} from '../util/util';
 import {getJSON, getReferrer, ResourceType} from '../util/ajax';
 import {isMapboxURL} from '../util/mapbox_url';
 import {stripQueryParameters} from '../util/url';
@@ -26,6 +26,7 @@ import {createExpression} from '../style-spec/expression/index';
 import {HD, prepareHD as prepareHDMain} from '../../modules/hd_main';
 import {prepareStandard as prepareStandardMain} from '../../modules/standard_main';
 import {HD_ROAD_COVERAGE_SOURCE_LAYER} from '../source/frc_coverage_snapshot';
+import {DebugModule, prepareDebug} from '../../modules/debug';
 import {
     validateStyle,
     validateLayoutProperty,
@@ -52,7 +53,6 @@ import styleSpec from '../style-spec/reference/latest';
 import {getGlobalWorkerPool as getWorkerPool} from '../util/worker_pool_factory';
 import deref from '../style-spec/deref';
 import emptyStyle from '../style-spec/empty';
-import diffStyles, {operations as diffOperations} from '../style-spec/diff';
 import {
     registerForPluginStateChange,
     evented as rtlTextPluginEvented,
@@ -177,7 +177,9 @@ const createConfigExpression = (option: OptionSpecification, value: unknown) => 
     return createExpression(value, propertySpec);
 };
 
-const supportedDiffOperations = pick(diffOperations, [
+// Operations the diff algorithm may emit that we handle incrementally without a full restyle.
+// Maintained as a plain Set of string constants — see src/style-spec/diff.ts.
+const supportedDiffOperations: ReadonlySet<string> = new Set([
     'addLayer',
     'removeLayer',
     'setLights',
@@ -207,7 +209,7 @@ const supportedDiffOperations = pick(diffOperations, [
     // 'setSprite',
 ]);
 
-const ignoredDiffOperations = pick(diffOperations, [
+const ignoredDiffOperations: ReadonlySet<string> = new Set([
     'setCenter',
     'setZoom',
     'setBearing',
@@ -645,6 +647,11 @@ class Style extends Evented<MapEvents> {
     _diffStyle(style: StyleSpecification | string, onStarted: (err: Error | null, isUpdateNeeded: boolean) => void, onFinished?: () => void) {
         this.globalId = this._getGlobalId(style);
 
+        // Fetch dev chunk, for string/URL path the fetch parallelises with the JSON request;
+        // for object path, validation will run synchronously and no-op for the first call
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        prepareDebug();
+
         const handleStyle = (json: StyleSpecification, callback: (err: Error | null, isUpdateNeeded: boolean) => void) => {
             try {
                 callback(null, this.setState(json, onFinished));
@@ -684,12 +691,18 @@ class Style extends Evented<MapEvents> {
         const validate = typeof options.validate === 'boolean' ?
             options.validate : !isMapboxURL(url);
 
+        // Preload the dev-chunk fetch with the style JSON
+        // correctness is enforced via await in `_load`
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        if (validate) prepareDebug();
+
         this.globalId = this._getGlobalId(url);
         url = this.map._requestManager.normalizeStyleURL(url, options.accessToken);
         this.resolvedImports.add(url);
 
         const cachedImport = this.importsCache.get(url);
-        if (cachedImport) return this._load(cachedImport, validate);
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        if (cachedImport) { this._load(cachedImport, validate); return; }
 
         const controller = new AbortController();
         this._request = {cancel: () => controller.abort()};
@@ -698,6 +711,7 @@ class Style extends Evented<MapEvents> {
             const {data: json} = await getJSON<StyleSpecification>(request, controller.signal);
             this._request = null;
             this.importsCache.set(url, json);
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this._load(json, validate);
         };
         load().catch((err: Error) => {
@@ -709,15 +723,23 @@ class Style extends Evented<MapEvents> {
     loadJSON(json: StyleSpecification, options: StyleSetterOptions = {}): void {
         this.fire(new Event('dataloading', {dataType: 'style'}));
 
+        const validate = options.validate !== false;
+        // Preload the dev-chunk fetch with the browser.frame()
+        // correctness is enforced via await in `_load`
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        if (validate) prepareDebug();
+
         this.globalId = this._getGlobalId(json);
         this._request = browser.frame(() => {
             this._request = null;
-            this._load(json, options.validate !== false);
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            this._load(json, validate);
         });
     }
 
     loadEmpty() {
         this.fire(new Event('dataloading', {dataType: 'style'}));
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this._load(empty, false);
     }
 
@@ -764,7 +786,12 @@ class Style extends Evented<MapEvents> {
                     // unnecessary animation frame delay when the data is already available.
                     style.fire(new Event('dataloading', {dataType: 'style'}));
                     style.globalId = style._getGlobalId(json);
-                    queueMicrotask(() => style._load(json, validate));
+                    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                    if (validate) prepareDebug();
+                    queueMicrotask(() => {
+                        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                        style._load(json, validate);
+                    });
                 } else {
                     style.loadJSON(json, {validate});
                 }
@@ -896,7 +923,7 @@ class Style extends Evented<MapEvents> {
         return this.isRootStyle() && (json.fragment || (!!json.schema && json.fragment !== false));
     }
 
-    _load(json: StyleSpecification, validate: boolean) {
+    async _load(json: StyleSpecification, validate: boolean) {
         // This style was loaded as a root style, but it is marked as a fragment and/or has a schema. We instead load
         // it as an import with the well-known ID "basemap" to make sure that we don't expose the internals.
         if (this._isInternalStyle(json)) {
@@ -907,14 +934,23 @@ class Style extends Evented<MapEvents> {
                 ...(json.zoom ? {zoom: json.zoom} : {}),
                 ...(json.light ? {light: json.light} : {})}) as StyleSpecification;
             this._importedAsBasemap = true;
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
             this._load(style, validate);
             return;
         }
 
         this.updateConfig(this._config, json.schema);
 
-        if (validate && emitValidationErrors(this, validateStyle(json))) {
-            return;
+        // In ESM builds, the dev chunk (validators) is dynamically imported.
+        // Await it before validating top-level style JSON so the call below
+        // is meaningful — `validateStyle` no-ops when `Debug` isn't loaded yet.
+        if (validate) {
+            await prepareDebug();
+            // Check the map wasn't removed while awaiting the dev chunk.
+            if (!this.dispatcher.actors.length) return;
+            if (emitValidationErrors(this, validateStyle(json))) {
+                return;
+            }
         }
 
         this._loaded = true;
@@ -2233,14 +2269,19 @@ class Style extends Evented<MapEvents> {
         nextState = clone(nextState);
         nextState.layers = deref(nextState.layers);
 
-        const changes = diffStyles(this.serialize(), nextState)
-            .filter(op => !(op.command in ignoredDiffOperations));
+        // `DebugModule.diffStyles` should be preloaded by `_diffStyle` before this runs
+        // otherwise throw so `_diffStyle`'s try/catch falls back to full restyle
+        if (!DebugModule.diffStyles) {
+            throw new Error('Debug module not loaded; cannot diff style.');
+        }
+        const changes = DebugModule.diffStyles(this.serialize(), nextState)
+            .filter(op => !ignoredDiffOperations.has(op.command));
 
         if (changes.length === 0) {
             return false;
         }
 
-        const unimplementedOps = changes.filter(op => !(op.command in supportedDiffOperations));
+        const unimplementedOps = changes.filter(op => !supportedDiffOperations.has(op.command));
         if (unimplementedOps.length > 0) {
             throw new Error(`Unimplemented: ${unimplementedOps.map(op => op.command).join(', ')}.`);
         }

@@ -32,7 +32,7 @@ import {HD, prepareHD} from '../../modules/hd_main';
 import hillshade from './draw_hillshade';
 import raster, {prepare as prepareRaster} from './draw_raster';
 import background from './draw_background';
-import {default as drawDebug, drawDebugPadding, drawDebugQueryGeometry} from './draw_debug';
+import {DebugModule} from '../../modules/debug';
 import custom from './draw_custom';
 import sky from './draw_sky';
 import Atmosphere from './draw_atmosphere';
@@ -1531,16 +1531,16 @@ class Painter {
                 }
             });
             if (selectedSource) {
-                if (this.options.showTileBoundaries) {
+                if (this.options.showTileBoundaries && DebugModule.drawDebug) {
                     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-                    drawDebug(this, selectedSource, selectedSource.getVisibleCoordinates(), Color.red, false, this.options.showParseStatus);
+                    DebugModule.drawDebug(this, selectedSource, selectedSource.getVisibleCoordinates(), Color.red, false, this.options.showParseStatus);
                 }
 
                 Debug.run(() => {
                     if (!selectedSource) return;
-                    if (this.options.showQueryGeometry) {
+                    if (this.options.showQueryGeometry && DebugModule.drawDebugQueryGeometry) {
                         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-                        drawDebugQueryGeometry(this, selectedSource, selectedSource.getVisibleCoordinates());
+                        DebugModule.drawDebugQueryGeometry(this, selectedSource, selectedSource.getVisibleCoordinates());
                     }
                     if (this.options.showTileAABBs) {
                         // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
@@ -1551,13 +1551,13 @@ class Painter {
         }
 
         Debug.run(() => {
-            if (this.terrain && this._debugParams.showTerrainProxyTiles) {
-                drawDebug(this, this.terrain.proxySourceCache, this.terrain.proxyCoords, new Color(1.0, 0.8, 0.1, 1.0), true, this.options.showParseStatus);
+            if (this.terrain && this._debugParams.showTerrainProxyTiles && DebugModule.drawDebug) {
+                DebugModule.drawDebug(this, this.terrain.proxySourceCache, this.terrain.proxyCoords, new Color(1.0, 0.8, 0.1, 1.0), true, this.options.showParseStatus);
             }
         });
 
-        if (this.options.showPadding) {
-            drawDebugPadding(this);
+        if (this.options.showPadding && DebugModule.drawDebugPadding) {
+            DebugModule.drawDebugPadding(this);
         }
 
         // Set defaults for most GL values so that anyone using the state after the render

@@ -1,5 +1,5 @@
 import Point from '@mapbox/point-geometry';
-import drawCollisionDebug from './draw_collision_debug';
+import {DebugModule} from '../../modules/debug';
 import SegmentVector from '../data/segment';
 import * as symbolProjection from '../symbol/projection';
 import {mat4, vec3, vec4} from 'gl-matrix';
@@ -111,12 +111,12 @@ function drawSymbols(painter: Painter, sourceCache: SourceCache, layer: SymbolSt
         }
     }
 
-    if (sourceCache.map.showCollisionBoxes) {
+    if (sourceCache.map.showCollisionBoxes && DebugModule.drawCollisionDebug) {
 
-        drawCollisionDebug(painter, sourceCache, layer, coords, layer.paint.get('text-translate'),
+        DebugModule.drawCollisionDebug(painter, sourceCache, layer, coords, layer.paint.get('text-translate'),
             layer.paint.get('text-translate-anchor'), true);
 
-        drawCollisionDebug(painter, sourceCache, layer, coords, layer.paint.get('icon-translate'),
+        DebugModule.drawCollisionDebug(painter, sourceCache, layer, coords, layer.paint.get('icon-translate'),
             layer.paint.get('icon-translate-anchor'), false);
     }
 }
