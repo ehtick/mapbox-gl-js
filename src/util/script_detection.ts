@@ -307,8 +307,9 @@ export function needsRotationInVerticalMode(char: number): boolean {
     }
 
     // General Punctuation — horizontal dashes and leaders defined in Shift JIS 2-byte code
+    // 0x2015 (HORIZONTAL BAR) is intentionally excluded here even though UAX #50 assigns it vo=R.
+    // It is the substitution target for both U+007C `|` and U+FF5C `｜` in verticalize_punctuation.ts
     if (char === 0x2010 /* hyphen */ ||
-        char === 0x2015 /* horizontal bar */ ||
         char === 0x2025 /* two dot leader */) {
         return true;
     }

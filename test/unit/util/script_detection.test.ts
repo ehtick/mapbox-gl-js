@@ -48,9 +48,9 @@ const UAX50_Tr = [
 // Ranges are verified by checking start, end, and immediate out-of-range
 // neighbours as separate boundary tests below.
 const UAX50_R = [
-    0x2010, // ‐ HYPHEN                 (General Punctuation, 2010..2015 ; R)
-    0x2015, // ― HORIZONTAL BAR         (General Punctuation, 2010..2015 ; R)
-    0x2025, // ‥ TWO DOT LEADER         (General Punctuation, 2022..2027 ; R)
+    0x2010, // ‐ HYPHEN                 (General Punctuation, 2010..2027 ; R)
+    // 0x2015 (― HORIZONTAL BAR) is intentionally excluded — see MUST_NOT_ROTATE below
+    0x2025, // ‥ TWO DOT LEADER         (General Punctuation, 2010..2027 ; R)
     0x2225, // ∥ PARALLEL TO            (Mathematical Operators, 221F..2233 ; R)
     0x2190, // ← LEFTWARDS ARROW        (Arrows, 2190..2194 ; R — we cover 2190..2193)
     0x2191, // ↑ UPWARDS ARROW
@@ -71,11 +71,14 @@ const SHIFT_JIS_OVERRIDES = [
 ];
 
 // Characters that must NOT return true from needsRotationInVerticalMode.
-// Covers three categories:
+// Covers four categories:
 //  a) UAX #50 vo=U (always upright) — CJK ideographs, kana, etc.
 //  b) UAX #50 vo=Tr, but handled by verticalizedCharacterMap substitution
 //     instead (glyph swapped before shaping; needsRotation is never consulted)
 //  c) UAX #50 vo=R, but outside the Shift JIS 2-byte scope we support
+//  d) UAX #50 vo=R, within Shift JIS scope, but is a substitution TARGET:
+//     another character maps to this one via verticalizedCharacterMap, so rotating
+//     it would undo the substitution and break the source character's rendering.
 const MUST_NOT_ROTATE = [
     // (a) UAX #50 vo=U — upright CJK and kana
     {char: 0x30A2, uaxVo: 'U',  name: 'ア KATAKANA LETTER A'},
@@ -96,6 +99,13 @@ const MUST_NOT_ROTATE = [
     {char: 0x2194, uaxVo: 'R',  name: '↔ LEFT RIGHT ARROW (just outside 2190–2193 range)'},
     {char: 0x254C, uaxVo: 'R',  name: '╌ LIGHT DOUBLE DASH HORIZONTAL (just outside 2500–254B range)'},
     {char: 0x2580, uaxVo: 'R',  name: '▀ UPPER HALF BLOCK (Block Elements, not Box Drawing)'},
+
+    // (d) UAX #50 vo=R, but is a substitution target — rotating it would undo the substitution.
+    // Both U+007C (| VERTICAL LINE) and U+FF5C (｜ FULLWIDTH VERTICAL LINE) map to
+    // U+2015 (― HORIZONTAL BAR) via verticalizedCharacterMap. Rotating U+2015 would turn the
+    // substituted horizontal-bar glyph back into a vertical bar, defeating the substitution
+    // and regressing rendering of both source characters in vertical text.
+    {char: 0x2015, uaxVo: 'R',  name: '― HORIZONTAL BAR (substitution target for U+007C | and U+FF5C ｜)'},
 ];
 
 // ---------------------------------------------------------------------------
