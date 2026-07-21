@@ -3,7 +3,7 @@ import {test, assert, afterEach, afterAll} from 'vitest';
 import {parseStyle, parseOptions, getActualImage, calculateDiff, diffCanvas, diffCtx, getActualImageDataURL, mapRef, fakeCanvasContainer} from './utils.js';
 // @ts-expect-error Cannot find module 'virtual:integration-tests' or its corresponding type declarations.
 import {integrationTests} from 'virtual:integration-tests';
-import {getStatsHTML, updateHTML, registerSkipped} from '../../util/html_generator';
+import {getStatsHTML, updateHTML, registerSkipped, fragmentIdFor} from '../../util/html_generator';
 import {mapboxgl} from '../lib/mapboxgl.js';
 import {sendFragment, sendBrowserDiagnostics, detectPlatformTagFromUserAgent, matchSkipTestRule, type SkipRuleMatch} from '../lib/utils';
 
@@ -85,9 +85,15 @@ type TestMetadata = {
 }
 
 let reportFragment: string | undefined;
+let reportFragmentName: string | undefined;
+
+// Passed-test images are embedded only when explicitly opted in (never on CI --
+// the flag is forced off there by the vite config). Failed tests always embed.
+const embedPassedImages = import.meta.env.VITE_EMBED_PASSED_IMAGES === 'true';
 
 const getTest = (renderTestName: string, preflightError?: unknown) => async () => {
     let errorMessage: string | undefined;
+    reportFragmentName = renderTestName;
     try {
         if (preflightError) {
             throw preflightError;
@@ -132,7 +138,7 @@ const getTest = (renderTestName: string, preflightError?: unknown) => async () =
             testMetaData.matchedExpectedFile = decodeURIComponent(expectedImage.src.split('/').pop() || '');
         }
 
-        if (diffImage && (import.meta.env.VITE_CI === 'false' || !pass)) {
+        if (diffImage && (!pass || embedPassedImages)) {
             diffCanvas.width = w;
             diffCanvas.height = h;
             const diffImageData = new ImageData(diffImage, w, h);
@@ -193,7 +199,7 @@ afterAll(async () => {
     for (const [testName, skipMatch] of Object.entries(skippedTests)) {
         const testPath = integrationTests[testName]?.path;
         await sendFragment(
-            reportFragmentIdx++,
+            fragmentIdFor(testName),
             registerSkipped(
                 testName,
                 testPath ? `${testPath}/style.json` : undefined,
@@ -210,10 +216,12 @@ afterAll(async () => {
     });
 });
 
-let reportFragmentIdx = 1;
-
 afterEach(async () => {
-    await sendFragment(reportFragmentIdx++, reportFragment);
+    // Send under the test's stable fragment id so a retry overwrites the prior
+    // attempt's fragment instead of adding a second entry for the same test.
+    if (reportFragmentName !== undefined) {
+        await sendFragment(fragmentIdFor(reportFragmentName), reportFragment);
+    }
 });
 
 afterEach(() => {

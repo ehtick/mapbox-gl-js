@@ -5,7 +5,7 @@ import {applyOperations} from '../lib/operation-handlers.js';
 import {deepEqual, generateDiffLog} from '../lib/json-diff.js';
 // @ts-expect-error Cannot find module 'virtual:integration-tests' or its corresponding type declarations.
 import {integrationTests} from 'virtual:integration-tests';
-import {getStatsHTML, setupHTML, updateHTML, registerSkipped} from '../../util/html_generator';
+import {getStatsHTML, setupHTML, updateHTML, registerSkipped, fragmentIdFor} from '../../util/html_generator';
 import {mapboxgl} from '../lib/mapboxgl.js';
 import {sendFragment, sendBrowserDiagnostics, detectPlatformTagFromUserAgent, matchSkipTestRule, type SkipRuleMatch} from '../lib/utils';
 import {transformRequest} from '../lib/transform-request.js';
@@ -47,9 +47,15 @@ document.body.appendChild(container);
 let map;
 
 let reportFragment: string | undefined;
+let reportFragmentName: string | undefined;
+
+// Passed-test images are embedded only when explicitly opted in (never on CI --
+// the flag is forced off there by the vite config). Failed tests always embed.
+const embedPassedImages = import.meta.env.VITE_EMBED_PASSED_IMAGES === 'true';
 
 const getTest = (queryTestName: string, preflightError?: unknown) => async () => {
     let errorMessage: string | undefined;
+    reportFragmentName = queryTestName;
     try {
         if (preflightError) {
             throw preflightError;
@@ -111,10 +117,17 @@ const getTest = (queryTestName: string, preflightError?: unknown) => async () =>
         await map.once('load');
         await applyOperations(map, options);
 
+        // toDataURL() is an expensive canvas readback + PNG encode, so compute
+        // it lazily and only once, on first use. In the common CI case (passing
+        // test, passed images not embedded) it is never needed.
+        let cachedCanvasDataUrl: string | undefined;
+        const getCanvasDataUrl = () => {
+            if (cachedCanvasDataUrl === undefined) cachedCanvasDataUrl = map.getCanvas().toDataURL();
+            return cachedCanvasDataUrl;
+        };
         const testMetaData: TestMetadata = {
             name: queryTestName,
             testPath: `${testPath}/style.json`,
-            actual: map.getCanvas().toDataURL(),
             width: options.width,
             height: options.height,
             minDiff: options.minDiff || 0,
@@ -142,10 +155,16 @@ const getTest = (queryTestName: string, preflightError?: unknown) => async () =>
 
         testMetaData.status = success ? 'passed' : 'failed';
 
+        // Embed the canvas image for failed tests always; for passed tests only
+        // when opted in (keeps the report small, especially on CI).
+        if (!success || embedPassedImages) {
+            testMetaData.actual = getCanvasDataUrl();
+        }
+
         if (import.meta.env.VITE_CI === 'false' && import.meta.env.VITE_UPDATE === 'true') {
             await server.commands.writeFile(`${testPath}/expected.json`, jsonDiff.replace('+ ', '').trim());
         } else if (import.meta.env.VITE_CI === 'false') {
-            await server.commands.writeFile(`${testPath}/actual.png`, testMetaData.actual!.split(',')[1], {encoding: 'base64'});
+            await server.commands.writeFile(`${testPath}/actual.png`, getCanvasDataUrl().split(',')[1], {encoding: 'base64'});
             await server.commands.writeFile(`${testPath}/actual.json`, JSON.stringify(actual, undefined, 2));
         }
 
@@ -187,7 +206,7 @@ afterAll(async () => {
     for (const [testName, skipMatch] of Object.entries(skippedTests)) {
         const testPath = integrationTests[testName]?.path;
         await sendFragment(
-            reportFragmentIdx++,
+            fragmentIdFor(testName),
             registerSkipped(
                 testName,
                 testPath ? `${testPath}/style.json` : undefined,
@@ -204,10 +223,12 @@ afterAll(async () => {
     });
 });
 
-let reportFragmentIdx = 1;
-
 afterEach(async () => {
-    await sendFragment(reportFragmentIdx++, reportFragment);
+    // Send under the test's stable fragment id so a retry overwrites the prior
+    // attempt's fragment instead of adding a second entry for the same test.
+    if (reportFragmentName !== undefined) {
+        await sendFragment(fragmentIdFor(reportFragmentName), reportFragment);
+    }
 });
 
 afterEach(() => {

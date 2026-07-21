@@ -27,7 +27,9 @@ type DecoratedTestData = TestReportData & {
     domId: string;
     domIdJs: string;
     isRenderTest: boolean;
-    attempt?: number;
+    attempts: number;
+    failedAttempts: number;
+    retryNote?: string;
     errorMessage?: string;
 };
 
@@ -73,6 +75,9 @@ const renderResultHTML = compile(`
     <% if (r.matchedExpectedFile) { %>
       <p class="diff"><strong>Matched expected file:</strong> <%= r.matchedExpectedFile %></p>
     <% } %>
+    <% if (r.retryNote) { %>
+      <p class="retry-note"><strong><%= r.retryNote %></strong></p>
+    <% } %>
     <% if (r.jsonDiff) { %>
       <details>
         <summary><strong style="color: red">JSON Diff</strong></summary>
@@ -114,6 +119,7 @@ img { margin: 0 10px 10px 0; border: 1px dotted #ccc; image-rendering: pixelated
 .test { border-bottom: 1px dotted #bbb; padding-bottom: 5px; }
 .tests { border-top: 1px dotted #bbb; margin-top: 10px; }
 .diff { color: #777; }
+.retry-note { color: #b26a00; }
 .ignore-reason { color: #555; font-style: italic; }
 .test p, .test pre { margin: 0 0 10px; }
 .test pre { font-size: 14px; }
@@ -210,11 +216,28 @@ let statsFailedHeader: HTMLHeadingElement | undefined;
 let statsSummary: HTMLParagraphElement | undefined;
 let refreshReportFilters: () => void = () => {};
 
+// Latest known status per test, so a test that fails then passes on retry is
+// counted once, by its final outcome.
 const testStatus = new Map<string, TestStatus>();
-const testId = new Map<string, number>();
+// Total runs and failed runs per test, used to annotate flaky/retried tests.
+const testAttempts = new Map<string, number>();
+const testFailedAttempts = new Map<string, number>();
+// Stable report-fragment id per test. Reused across a test's retries so the
+// final attempt's fragment overwrites earlier ones on the server side (the
+// report is assembled from fragments keyed by id), yielding exactly one report
+// entry per test regardless of how many times vitest reran it.
+const fragmentIds = new Map<string, number>();
+let nextFragmentId = 1;
+// Live in-browser DOM node per test, for the optional local watch view.
+const liveDomNodes = new Map<string, Element>();
 
-function isCI(): boolean {
-    return import.meta.env.CI === true || import.meta.env.VITE_CI === 'true';
+export function fragmentIdFor(name: string): number {
+    let id = fragmentIds.get(name);
+    if (id === undefined) {
+        id = nextFragmentId++;
+        fragmentIds.set(name, id);
+    }
+    return id;
 }
 
 function failedCount(): number {
@@ -233,13 +256,21 @@ function updateStatsDisplay(): void {
         statsFailedHeader.textContent = 'All tests passed!';
     }
 
-    const passedLabel = isCI() ? `${stats.passed} passed (hidden)` : `${stats.passed} passed`;
-    statsSummary.textContent = `${passedLabel}, ${stats.skipped} skipped, ${failedCount()} failed.`;
+    statsSummary.textContent = `${stats.passed} passed, ${stats.skipped} skipped, ${failedCount()} failed.`;
 }
 
-function shouldAddToReport(testData: TestReportData): boolean {
-    if (testData.status === 'passed' && isCI()) return false;
-    return true;
+// A note surfaced on retried tests: flaky passes and all-attempts failures.
+// Retries themselves are kept (they smooth over genuinely flaky rendering);
+// this just makes the retrying visible instead of leaving a stale failed entry.
+function retryNote(status: TestStatus, attempts: number, failedAttempts: number): string | undefined {
+    if (status === 'passed' && failedAttempts > 0) {
+        const plural = failedAttempts === 1 ? 'attempt' : 'attempts';
+        return `Flaky: passed after ${failedAttempts} failed ${plural} (${attempts} runs total).`;
+    }
+    if (status === 'failed' && attempts > 1) {
+        return `Failed on all ${attempts} attempts.`;
+    }
+    return undefined;
 }
 
 function shouldShowImages(testData: TestReportData): boolean {
@@ -255,18 +286,18 @@ function escapeHTML(value: string): string {
     return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function decorateTestData(testData: TestReportData): DecoratedTestData {
+function decorateTestData(testData: TestReportData, attempts: number, failedAttempts: number): DecoratedTestData {
     const status = testData.status;
-    const attempt = testId.get(testData.name);
-    const domId = attempt ? `${testData.name}-attempt${attempt}` : testData.name;
     const decorated: DecoratedTestData = {
         ...testData,
         color: testData.color || colors[status],
         showImages: shouldShowImages(testData),
-        domId,
-        domIdJs: escapeJsString(domId),
+        domId: testData.name,
+        domIdJs: escapeJsString(testData.name),
         isRenderTest: testData.imageThreshold !== undefined,
-        attempt,
+        attempts,
+        failedAttempts,
+        retryNote: retryNote(status, attempts, failedAttempts),
     };
     if (testData.error) {
         decorated.errorMessage = escapeHTML(testData.error.stack || testData.error.message || String(testData.error));
@@ -274,9 +305,11 @@ function decorateTestData(testData: TestReportData): DecoratedTestData {
     return decorated;
 }
 
-function getFilterCheckboxesHTML(minimizeReport = isCI()): string {
-    const showPassedCheckbox = minimizeReport ? '' : '<label><input type="checkbox" id="checkbox-show-passed">Show passed tests</label>\n';
-    return `${showPassedCheckbox}<label><input type="checkbox" id="checkbox-show-skipped">Show skipped tests</label>
+// Passed tests are always included now (hidden behind the "Show passed tests"
+// checkbox), so the checkbox is always rendered.
+function getFilterCheckboxesHTML(): string {
+    return `<label><input type="checkbox" id="checkbox-show-passed">Show passed tests</label>
+<label><input type="checkbox" id="checkbox-show-skipped">Show skipped tests</label>
 <label><input type="checkbox" id="checkbox-img-hover" checked>Toggle images on Hover</label>`;
 }
 
@@ -342,39 +375,52 @@ export function getStatsHTML(): string {
     return '';
 }
 
+// Records one run of a test and returns the HTML fragment for its (single)
+// report entry. On a retry this is called again for the same name; the caller
+// sends the result under the test's stable fragmentIdFor(name), so the latest
+// run's fragment replaces earlier ones -- a flaky test that eventually passes
+// ends up as one passed entry (annotated with its failed attempts), and a test
+// that fails every attempt ends up as one failed entry (annotated with the
+// attempt count). Always returns a non-empty fragment so the overwrite happens.
 export function updateHTML(testData: TestReportData): string {
     const status = testData.status;
+    const name = testData.name;
 
-    if (!testStatus.has(testData.name)) {
-        stats[status]++;
-        testStatus.set(testData.name, status);
-        testId.set(testData.name, 0);
-    } else {
-        const previousStatus = testStatus.get(testData.name);
-        if (previousStatus !== status) {
-            if (previousStatus) stats[previousStatus]--;
-            stats[status]++;
-            testStatus.set(testData.name, status);
-            testId.set(testData.name, (testId.get(testData.name) ?? 0) + 1);
-        } else {
-            testId.set(testData.name, (testId.get(testData.name) ?? 0) + 1);
-        }
+    const attempts = (testAttempts.get(name) ?? 0) + 1;
+    testAttempts.set(name, attempts);
+    if (status === 'failed') {
+        testFailedAttempts.set(name, (testFailedAttempts.get(name) ?? 0) + 1);
     }
+
+    // Tally each test once, by its latest status.
+    const previousStatus = testStatus.get(name);
+    if (previousStatus === undefined) {
+        stats[status]++;
+    } else if (previousStatus !== status) {
+        stats[previousStatus]--;
+        stats[status]++;
+    }
+    testStatus.set(name, status);
 
     updateStatsDisplay();
 
-    if (!shouldAddToReport(testData)) {
-        return '';
-    }
+    const failedAttempts = testFailedAttempts.get(name) ?? 0;
+    const html = generateResultHTML({r: decorateTestData(testData, attempts, failedAttempts)});
 
-    if (!resultsContainer) {
-        return '';
+    // Mirror into the live in-browser DOM for local watching. Replace any prior
+    // entry for this test rather than appending a duplicate on retries.
+    if (resultsContainer) {
+        const frag = document.createRange().createContextualFragment(html);
+        const node = frag.firstElementChild;
+        const existing = liveDomNodes.get(name);
+        if (existing && node) {
+            resultsContainer.replaceChild(node, existing);
+        } else if (node) {
+            resultsContainer.appendChild(node);
+        }
+        if (node) liveDomNodes.set(name, node);
+        refreshReportFilters();
     }
-
-    const html = generateResultHTML({r: decorateTestData(testData)});
-    const resultHTMLFrag = document.createRange().createContextualFragment(html);
-    resultsContainer.appendChild(resultHTMLFrag);
-    refreshReportFilters();
 
     return html;
 }

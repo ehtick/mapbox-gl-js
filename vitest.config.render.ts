@@ -37,6 +37,9 @@ export default mergeConfig(baseConfig, defineConfig({
     define: {
         'import.meta.env.VITE_CI': JSON.stringify(String(isCI)),
         'import.meta.env.VITE_UPDATE': JSON.stringify(String(process.env.UPDATE === 'true')),
+        // Opt-in embedding of passed-test images in the report (local dev only;
+        // forced off on CI to keep the report small).
+        'import.meta.env.VITE_EMBED_PASSED_IMAGES': JSON.stringify(String(!isCI && process.env.EMBED_PASSED_IMAGES === 'true')),
         'import.meta.env.VITE_SPRITE_FORMAT': process.env.SPRITE_FORMAT != null ? JSON.stringify(process.env.SPRITE_FORMAT) : null,
         'import.meta.env.VITE_DIST_BUNDLE': JSON.stringify(bundle),
     },
