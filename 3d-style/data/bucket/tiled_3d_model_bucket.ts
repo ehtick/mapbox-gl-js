@@ -137,6 +137,9 @@ export class Tiled3dModelFeature {
 
 class Tiled3dModelBucket implements Bucket {
     requiresStandardRuntime = true;
+    // Discriminator tag so core code (feature_index) can identify this bucket type without a
+    // static value import of the class. Set as an own enumerable field, so it survives transfer.
+    readonly isTiled3dModelBucket = true;
 
     id: OverscaledTileID;
     uploaded: boolean;

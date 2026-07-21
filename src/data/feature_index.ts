@@ -13,8 +13,7 @@ import {polygonIntersectsBox} from '../util/intersection_tests';
 import {PossiblyEvaluated} from '../style/properties';
 import {FeatureIndexArray} from './array_types';
 import {DEMSampler} from '../terrain/elevation';
-import Tiled3dModelBucket from '../../3d-style/data/bucket/tiled_3d_model_bucket';
-import {loadMatchingModelFeature} from '../../3d-style/style/style_layer/model_style_layer';
+import {Standard} from '../../modules/standard_registry';
 import {createExpression} from '../style-spec/expression/index';
 
 import type {OverscaledTileID} from '../source/tile_id';
@@ -31,6 +30,7 @@ import type {FeatureState, StyleExpression} from '../style-spec/expression/index
 import type {FeatureVariant} from '../util/vectortile_to_geojson';
 import type {ImageId} from '../style-spec/expression/types/image_id';
 import type {PossiblyEvaluatedPropertyValue} from '../style/properties';
+import type Tiled3dModelBucket from '../../3d-style/data/bucket/tiled_3d_model_bucket';
 
 type QueryParameters = {
     pixelPosMatrix: Float32Array;
@@ -308,10 +308,11 @@ class FeatureIndex {
 
             const tile = tilespaceGeometry.tile;
 
-            const bucket = tile.getBucket(styleLayer);
-            if (!bucket || !(bucket instanceof Tiled3dModelBucket)) continue;
+            const bucket = tile.getBucket(styleLayer) as Tiled3dModelBucket;
+            if (!bucket || !bucket.isTiled3dModelBucket) continue;
+            if (!Standard.loadMatchingModelFeature) continue;
 
-            const model = loadMatchingModelFeature(bucket, featureIndex, tilespaceGeometry, transform);
+            const model = Standard.loadMatchingModelFeature(bucket, featureIndex, tilespaceGeometry, transform);
             if (!model) continue;
 
             const {z, x, y} = tile.tileID.canonical;

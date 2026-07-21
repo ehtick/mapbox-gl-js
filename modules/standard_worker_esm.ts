@@ -4,6 +4,7 @@ import {warnOnce} from '../src/util/util';
 // Readers (e.g. worker_tile) check `loaded` before invoking the hooks.
 export let ModelBucket;
 export let Tiled3dModelBucket;
+export let Tiled3dModelWorkerSource;
 export let loaded = false;
 
 export async function prepareStandard(): Promise<void> {
@@ -11,6 +12,7 @@ export async function prepareStandard(): Promise<void> {
         const mod = await import('./standard_worker_imports');
         ModelBucket = mod.ModelBucket;
         Tiled3dModelBucket = mod.Tiled3dModelBucket;
+        Tiled3dModelWorkerSource = mod.Tiled3dModelWorkerSource;
         loaded = true;
     } catch (error) {
         warnOnce('Could not load Standard module.');

@@ -1,4 +1,4 @@
-export {ModelBucket, Tiled3dModelBucket} from './standard_worker_imports';
+export {ModelBucket, Tiled3dModelBucket, Tiled3dModelWorkerSource} from './standard_worker_imports';
 
 // Live in UMD builds: Standard is always loaded because all symbols are resolved
 // synchronously at bundle load time. ESM exposes the same shape but lazily.

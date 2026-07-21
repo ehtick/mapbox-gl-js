@@ -1,10 +1,9 @@
 import {Event, ErrorEvent, Evented} from '../../src/util/evented';
-import Model from '../data/model';
-import convertModel from '../source/model_loader';
 import {ResourceType} from '../../src/util/ajax';
-import {loadGLTF} from '../util/loaders';
 import {isValidUrl} from '../../src/style-spec/validate/validate_model';
+import {Standard, prepareStandard} from '../../modules/standard_main';
 
+import type Model from '../data/model';
 import type {RequestManager} from '../../src/util/mapbox';
 import type Painter from '../../src/render/painter';
 import type {ModelsSpecification} from '../../src/style-spec/types';
@@ -50,11 +49,9 @@ class ModelManager extends Evented {
             const request = await this.requestManager.transformRequest(url, ResourceType.Model);
             if (!this.modelByURL[url]) return null;
 
-            const gltf = await loadGLTF(request.url);
-            const nodes = convertModel(gltf);
-            const model = new Model(id, url, undefined, undefined, nodes);
-            model.computeBoundsAndApplyParent();
-            return model;
+            await prepareStandard();
+            if (!Standard.loadModel) return null;
+            return await Standard.loadModel(request.url, id, url);
         } catch (e) {
             if ((e as {status?: number}).status === 404) return null;
             this.fire(new ErrorEvent(new Error(`Could not load model ${id} from ${url}`, {cause: e})));

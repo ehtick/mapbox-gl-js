@@ -11,10 +11,10 @@ import {TriangleIndexArray,
     Color3fLayoutArray,
     Color4fLayoutArray
 } from '../../src/data/array_types';
-import {GLTF_TO_ARRAY_TYPE, GLTF_COMPONENTS} from '../util/loaders';
+import {loadGLTF, GLTF_TO_ARRAY_TYPE, GLTF_COMPONENTS} from '../util/loaders';
 import {base64DecToArr} from '../../src/util/util';
 import TriangleGridIndex from '../../src/util/triangle_grid_index';
-import {HEIGHTMAP_DIM} from '../data/model';
+import Model, {HEIGHTMAP_DIM} from '../data/model';
 import {ModelBVH} from './model_bvh';
 
 import type {vec2} from 'gl-matrix';
@@ -664,6 +664,15 @@ export default function convertModel(gltf: GLTF): Array<ModelNode> {
     }
 
     return resultNodes;
+}
+
+// Fetches a glTF, converts it, and builds a Model. Reached from core `ModelManager` through the
+// `Standard` facade so that the glTF/draco/meshopt loaders stay out of core.
+export async function loadModel(requestUrl: string, id: string, url: string): Promise<Model> {
+    const gltf = await loadGLTF(requestUrl);
+    const model = new Model(id, url, undefined, undefined, convertModel(gltf));
+    model.computeBoundsAndApplyParent();
+    return model;
 }
 
 export function process3DTile(gltf: GLTF, zScale: number): Array<ModelNode> {

@@ -24,9 +24,9 @@ function esmConfig(dir: string, workerSuffix: string, emitVisualizer = false): R
             dir,
             chunkFileNames: (chunk) => {
                 if (chunk.isDynamicEntry) {
-                    if (chunk.facadeModuleId.endsWith('hd_main_imports.ts')) return 'hd.shared.js';
+                    if (chunk.facadeModuleId.endsWith('hd_main_imports.ts')) return 'hd.main.js';
                     if (chunk.facadeModuleId.endsWith('hd_worker_imports.ts')) return 'hd.worker.js';
-                    if (chunk.facadeModuleId.endsWith('standard_main_imports.ts')) return 'standard.shared.js';
+                    if (chunk.facadeModuleId.endsWith('standard_main_imports.ts')) return 'standard.main.js';
                     if (chunk.facadeModuleId.endsWith('standard_worker_imports.ts')) return 'standard.worker.js';
                     if (chunk.facadeModuleId.endsWith('debug_imports.ts')) return 'debug.js';
                 }
@@ -34,8 +34,14 @@ function esmConfig(dir: string, workerSuffix: string, emitVisualizer = false): R
                 // chunk.name, which is derived from rollup's representative-module selection
                 // and can silently change when the module graph topology shifts
                 if (chunk.moduleIds.some(id => id.endsWith('/src/ui/map.ts'))) return 'core.js';
-                if (chunk.moduleIds.some(id => id.endsWith('/3d-style/data/bucket/building_bucket.ts'))) return 'hd.common.js';
-                if (chunk.moduleIds.some(id => id.endsWith('/3d-style/render/draw_ground_effect.ts'))) return 'hd_standard.common.js';
+                if (chunk.moduleIds.some(id => id.endsWith('/3d-style/data/bucket/building_bucket.ts'))) return 'hd.shared.js';
+                if (chunk.moduleIds.some(id => id.endsWith('/3d-style/render/draw_ground_effect.ts'))) return 'hd_standard.shared.js';
+                // The model data cluster (Model, model_loader, glTF/draco/meshopt loaders) is shared
+                // between the HD and Standard lazy graphs and reachable from neither core entry — keep
+                // it out of the core `shared*.js` glob.
+                if (chunk.moduleIds.some(id => id.endsWith('/3d-style/data/model.ts'))) return 'hd_standard.model.js';
+                // The Standard model buckets are shared between the Standard main and worker chunks only.
+                if (chunk.moduleIds.some(id => id.endsWith('/3d-style/data/bucket/model_bucket.ts'))) return 'standard.shared.js';
                 return 'shared.js'; // catch-all: the large gl-matrix / startup utilities chunk
             },
             experimentalMinChunkSize: 5000,
@@ -60,6 +66,7 @@ function esmConfig(dir: string, workerSuffix: string, emitVisualizer = false): R
         preserveEntrySignatures: 'strict',
         plugins: [
             esmSubstitutions(workerSuffix),
+            assertWorkerChunkIsolation(),
             ...plugins({production, minified, test: false, keepClassNames: false, format: 'esm'}),
             emitVisualizer && visualizer({
                 filename: `${dir}treemap.html`,
@@ -93,7 +100,57 @@ export default (): RollupOptions[] => {
     ];
 };
 
-const filesToSub = new Set(['hd_main', 'hd_worker', 'standard_main', 'standard_worker', 'debug']);
+const filesToSub = new Set(['hd_main', 'hd_worker', 'standard_main', 'standard_registry', 'standard_worker', 'debug']);
+
+/**
+ * Guards the worker/main lazy-chunk boundary.
+ *
+ * Main-tier lazy chunks (`*.main.js`) hold main-thread-only code and must never be
+ * reachable from the worker entry: bundlers such as Vite re-bundle the worker as a
+ * nested build, and a chunk that ends up shared across two dynamic imports inside that
+ * worker build cannot be inlined into a non-code-splitting (`iife`) worker — the failure
+ * surfaces far downstream (in a consumer's bundler) with an error that points nowhere
+ * near the offending import. This asserts the invariant here instead, at build time.
+ *
+ * A regression is almost always a worker-reachable module (e.g. `feature_index`,
+ * a bucket, a style layer) importing a `*_main` module facade that carries the
+ * `import('./*_main_imports')` call. Import the loader-free `*_registry` facade instead.
+ */
+function assertWorkerChunkIsolation(): Plugin {
+    return {
+        name: 'assert-worker-chunk-isolation',
+        generateBundle(_options, bundle) {
+            const chunks = Object.values(bundle).filter(output => output.type === 'chunk');
+            const workerEntry = chunks.find(chunk => chunk.isEntry && chunk.facadeModuleId && chunk.facadeModuleId.endsWith('/src/source/worker.ts'));
+            if (!workerEntry) {
+                this.error('worker entry chunk not found — cannot verify main/worker chunk isolation');
+                return;
+            }
+
+            const byFileName = new Map(chunks.map(chunk => [chunk.fileName, chunk]));
+
+            // Collect chunks statically reachable from the worker entry, and flag any that
+            // dynamically import a main-tier chunk.
+            const seen = new Set<string>([workerEntry.fileName]);
+            const queue = [workerEntry.fileName];
+            while (queue.length > 0) {
+                const chunk = byFileName.get(queue.pop());
+                if (!chunk) continue;
+                for (const leaked of chunk.dynamicImports) {
+                    if (leaked.endsWith('.main.js')) {
+                        this.error(`Worker-reachable chunk "${chunk.fileName}" dynamically imports main-tier chunk "${leaked}". A worker-reachable module is importing a "*_main" facade (which carries the main-chunk import()). Import the loader-free "*_registry" facade instead.`);
+                    }
+                }
+                for (const next of chunk.imports) {
+                    if (!seen.has(next)) {
+                        seen.add(next);
+                        queue.push(next);
+                    }
+                }
+            }
+        }
+    };
+}
 
 function esmSubstitutions(workerSuffix: string): Plugin {
     return {

@@ -4,7 +4,7 @@ import VectorTileWorkerSource from './vector_tile_worker_source';
 import RasterDEMTileWorkerSource from './raster_dem_tile_worker_source';
 import RasterArrayTileWorkerSource from './raster_array_tile_worker_source';
 import GeoJSONWorkerSource from './geojson_worker_source';
-import Tiled3dModelWorkerSource from '../../3d-style/source/tiled_3d_model_worker_source';
+import * as Standard from '../../modules/standard_worker';
 import assert from '../style-spec/util/assert';
 import {plugin as globalRTLTextPlugin, rtlPluginStatus} from './rtl_text_plugin';
 import {enforceCacheSizeLimit} from '../util/tile_request_cache';
@@ -47,7 +47,7 @@ export default class MapWorker {
     layerIndexes: WorkerScopeRegistry<StyleLayerIndex>;
     availableImages: WorkerScopeRegistry<ImageId[]>;
     availableModels: WorkerScopeRegistry<StyleModelMap>;
-    workerSourceTypes: Record<WorkerSourceType, WorkerSourceConstructor>;
+    workerSourceTypes: Partial<Record<WorkerSourceType, WorkerSourceConstructor>>;
     workerSources: WorkerSourceRegistry;
     projections: Record<string, Projection>;
     defaultProjection: Projection;
@@ -78,7 +78,8 @@ export default class MapWorker {
             'geojson': GeoJSONWorkerSource,
             'raster-dem': RasterDEMTileWorkerSource,
             'raster-array': RasterArrayTileWorkerSource,
-            'batched-model': Tiled3dModelWorkerSource
+            // 'batched-model' is registered lazily on first `loadTile` (see below) — its
+            // worker source class lives in the Standard module.
         };
 
         // [mapId][scope][sourceType][sourceName] => worker source instance
@@ -221,9 +222,19 @@ export default class MapWorker {
         this.getLayerIndex(mapId, params.scope).update(params.layers, params.removedIds, params.options);
     }
 
-    loadTile(mapId: number, params: WorkerInbox['loadTile']['params']): Promise<WorkerInbox['loadTile']['result']> {
+    async loadTile(mapId: number, params: WorkerInbox['loadTile']['params']): Promise<WorkerInbox['loadTile']['result']> {
         assert(params.type);
         params.projection = this.projections[mapId] || this.defaultProjection;
+        // The `batched-model` worker source lives in the lazily-loaded Standard module; make
+        // sure it's registered before the first tile of such a source is parsed. `loadTile`
+        // is already async, so an await-gate here mirrors the main-thread `worker_tile` gate.
+        if (params.type === 'batched-model' && !this.workerSourceTypes['batched-model']) {
+            await Standard.prepareStandard();
+            if (!Standard.Tiled3dModelWorkerSource) {
+                throw new Error('Could not load Standard module for "batched-model" source.');
+            }
+            this.workerSourceTypes['batched-model'] = Standard.Tiled3dModelWorkerSource;
+        }
         return this.getWorkerSource(mapId, params).loadTile(params);
     }
 
@@ -233,18 +244,34 @@ export default class MapWorker {
 
     reloadTile(mapId: number, params: WorkerInbox['reloadTile']['params']): Promise<WorkerInbox['reloadTile']['result']> {
         assert(params.type);
+        // No lazy gate needed for 'batched-model': a reload implies the tile was previously
+        // loaded in this worker's lifetime, so the Standard module is already registered.
         params.projection = this.projections[mapId] || this.defaultProjection;
         return this.getWorkerSource(mapId, params).reloadTile(params);
     }
 
     abortTile(mapId: number, params: WorkerInbox['abortTile']['params']): Promise<void> | void {
         assert(params.type);
-        return this.getWorkerSource(mapId, params).abortTile(params);
+        // Look up an existing worker source rather than creating one: a source whose
+        // type is registered lazily (e.g. 'batched-model' from the Standard module) may
+        // not exist yet when a tile is aborted before its `loadTile` runs. No instance
+        // means no in-flight tile to abort.
+        const workerSource = this.getExistingWorkerSource(mapId, params);
+        return workerSource ? workerSource.abortTile(params) : undefined;
     }
 
     removeTile(mapId: number, params: WorkerInbox['removeTile']['params']): Promise<void> | void {
         assert(params.type);
-        return this.getWorkerSource(mapId, params).removeTile(params);
+        // As with `abortTile`, only act on an already-created worker source.
+        const workerSource = this.getExistingWorkerSource(mapId, params);
+        return workerSource ? workerSource.removeTile(params) : undefined;
+    }
+
+    getExistingWorkerSource(mapId: number, params: WorkerSourceRequest): WorkerSource | undefined {
+        const {type, source, scope} = params;
+        const forMap = this.workerSources[mapId];
+        if (!forMap || !forMap[scope] || !forMap[scope][type]) return undefined;
+        return forMap[scope][type][source];
     }
 
     removeSource(mapId: number, params: WorkerInbox['removeSource']['params']): Promise<void> | void {
@@ -382,7 +409,7 @@ export default class MapWorker {
         if (!this.isSpriteLoaded[mapId])
             this.isSpriteLoaded[mapId] = {};
 
-        if (!workerSources[mapId][scope][type][source]) {
+        if (!this.getExistingWorkerSource(mapId, params)) {
             // One worker actor serves many maps; bind the owning mapId so the
             // WorkerSource's replies route back to the right map.
             const actor = this.actor.getWorkerSourceActor(mapId);

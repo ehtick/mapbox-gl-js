@@ -1,8 +1,7 @@
 import {warnOnce} from '../src/util/util';
+import {Standard} from './standard_registry_esm';
 
-import type {Standard as StandardType} from './standard_main_imports';
-
-export const Standard: Partial<typeof StandardType> = {};
+export {Standard};
 
 export async function prepareStandard(): Promise<void> {
     try {

@@ -45,6 +45,8 @@ import {
     getType as getSourceType,
     setType as setSourceType,
 } from '../source/source';
+import {isLazySourceType, ensureSourceType} from '../source/lazy_source_types';
+import LazySource from '../source/lazy_source';
 import {queryRenderedFeatures, queryRenderedSymbols, querySourceFeatures, shouldSkipFeatureVariant} from '../source/query_features';
 import SourceCache from '../source/source_cache';
 import {RenderSourceType} from '../source/render_source_type';
@@ -2453,15 +2455,25 @@ class Style extends Evented<MapEvents> {
         if (shouldValidate && this._validate(validateSource, `sources.${id}`, source, null, options)) return;
 
         if (this.map && this.map._collectResourceTiming) source.collectResourceTiming = true;
-        const sourceInstance = createSource(id, source, this.dispatcher, this);
+
+        // A source type whose class lives in a lazily-loaded module (e.g. `model`,
+        // `batched-model` in the Standard module). To keep `addSource` synchronous, add a
+        // placeholder source now and upgrade it in place once the module resolves.
+        const lazy = isLazySourceType(source.type) && !getSourceType(source.type);
+        const sourceInstance: Source = lazy ?
+            new LazySource(id, source as SourceSpecification, this.dispatcher, this) as unknown as Source :
+            createSource(id, source, this.dispatcher, this);
         sourceInstance.scope = this.scope;
 
-        sourceInstance.setEventedParent(this, () => ({
-            isSourceLoaded: this._isSourceCacheLoaded(sourceInstance.id),
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            source: sourceInstance.serialize(),
-            sourceId: sourceInstance.id
-        }));
+        const setSourceEventedParent = (src: Source) => {
+            src.setEventedParent(this, () => ({
+                isSourceLoaded: this._isSourceCacheLoaded(src.id),
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                source: src.serialize(),
+                sourceId: src.id
+            }));
+        };
+        setSourceEventedParent(sourceInstance);
 
         const addSourceCache = (renderSourceType?: RenderSourceType) => {
             const prefix = renderSourceType === RenderSourceType.Symbol ? 'symbol:' :
@@ -2489,6 +2501,29 @@ class Style extends Evented<MapEvents> {
 
         if (sourceInstance.onAdd)
             sourceInstance.onAdd(this.map);
+
+        if (lazy) {
+            // Lazy types have no `symbol:`/`fill-extrusion:` caches, so a single `other:`
+            // SourceCache backs the placeholder. Load the module and swap the real source in.
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            ensureSourceType(source.type).then(() => {
+                const SourceType = getSourceType(source.type);
+                const sourceCache = this._otherSourceCaches[id];
+                // The source may have been removed during the async gap; the cache may also
+                // have been upgraded already (idempotent) — bail unless it still holds the placeholder.
+                if (!sourceCache || sourceCache.getSource() !== sourceInstance) return;
+                if (!SourceType) {
+                    this.fire(new ErrorEvent(new Error(`Could not load module for source type "${source.type}".`)));
+                    return;
+                }
+                const realSource = createSource(id, source, this.dispatcher, this);
+                realSource.scope = this.scope;
+                setSourceEventedParent(realSource);
+                sourceCache.setSource(realSource);
+                if (realSource.onAdd) realSource.onAdd(this.map);
+                this._changes.setDirty();
+            });
+        }
 
         // Avoid triggering redundant style update after adding initial sources.
         if (!options.isInitialLoad) {

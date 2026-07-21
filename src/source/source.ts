@@ -8,8 +8,6 @@ import video from '../source/video_source';
 import image from '../source/image_source';
 import canvas from '../source/canvas_source';
 import custom from '../source/custom_source';
-import model from '../../3d-style/source/model_source';
-import tiled3DModel from '../../3d-style/source/tiled_3d_model_source';
 
 import type {CanonicalTileID, OverscaledTileID} from './tile_id';
 import type Tile from './tile';
@@ -115,7 +113,7 @@ export interface ISource<T = Source['type']> extends Evented<SourceEvents> {
 
 export type SourceClass = Class<ISource>;
 
-const sourceTypes: Record<Source['type'], Class<ISource>> = {
+const sourceTypes: Partial<Record<Source['type'], Class<ISource>>> = {
     vector,
     raster,
     'raster-dem': rasterDem,
@@ -123,13 +121,11 @@ const sourceTypes: Record<Source['type'], Class<ISource>> = {
     geojson,
     video,
     image,
-    model,
-    'batched-model': tiled3DModel,
     canvas,
     custom
 };
 
-export type SourceType = keyof typeof sourceTypes;
+export type SourceType = Source['type'];
 
 /*
  * Creates a tiled data source instance given an options object.
@@ -167,7 +163,7 @@ export const getType = function (name: string): Class<ISource> | undefined {
 };
 
 export const setType = function (name: string, type: Class<ISource>) {
-    sourceTypes[name] = type;
+    sourceTypes[name as Source['type']] = type;
 };
 
 export interface Actor {

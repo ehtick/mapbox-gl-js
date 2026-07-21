@@ -20,7 +20,7 @@ import {Texture3D} from '../../src/render/texture';
 import {pointInFootprint} from '../../3d-style/source/replacement_source';
 import Point from '@mapbox/point-geometry';
 import LngLat from '../../src/geo/lng_lat';
-import {tileToLngLat} from '../style/style_layer/model_style_layer';
+import {tileToLngLat} from '../style/style_layer/model_layer_query';
 import SegmentVector from '../../src/data/segment';
 import {PosArray, TriangleIndexArray} from '../../src/data/array_types';
 import posAttributes from '../../src/data/pos_attributes';
