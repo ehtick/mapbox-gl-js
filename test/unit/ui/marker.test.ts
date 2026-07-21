@@ -1349,6 +1349,26 @@ describe('Globe', () => {
         });
     });
 
+    test('does not override a user-set pointerEvents on a visible marker (#13701)', async () => {
+        const map = createMap();
+        const marker = new Marker()
+            .setLngLat([82, 0])
+            .addTo(map);
+        map._domRenderTaskQueue.run();
+
+        marker.getElement().style.pointerEvents = 'none';
+        map.setProjection('globe');
+
+        await new Promise(resolve => {
+            map.once('render', () => {
+                expect(marker.getElement().style.opacity).toBe('1');
+                expect(marker.getElement().style.pointerEvents).toBe('none');
+                map.remove();
+                resolve();
+            });
+        });
+    });
+
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     function transform(marker) { return marker.getElement().style.transform; }
 

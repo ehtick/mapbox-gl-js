@@ -107,6 +107,7 @@ export default class Marker extends Evented<MarkerEvents> {
     _updateMoving: () => void;
     _occludedOpacity: number;
     _altitude: number;
+    _pointerEvents?: string;
     _svgElement: Element;
     _shadowElement: Element;
 
@@ -154,6 +155,7 @@ export default class Marker extends Evented<MarkerEvents> {
 
         this._state = 'inactive';
         this._isDragging = false;
+        this._pointerEvents = null;
         this._updateMoving = () => this._update(true);
 
         if (!options || !options.element) {
@@ -554,7 +556,12 @@ export default class Marker extends Evented<MarkerEvents> {
         }
 
         this._element.style.opacity = `${opacity}`;
-        this._element.style.pointerEvents = opacity > 0 ? 'auto' : 'none';
+        const currentPointerEvents = this._element.style.pointerEvents;
+        const isUnmanaged = this._pointerEvents === null ? currentPointerEvents === '' : currentPointerEvents === this._pointerEvents;
+        if (isUnmanaged) {
+            this._pointerEvents = opacity > 0 ? 'auto' : 'none';
+            this._element.style.pointerEvents = this._pointerEvents;
+        }
         if (this._popup) {
             this._popup._setOpacity(opacity);
         }
