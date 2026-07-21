@@ -36,9 +36,7 @@ tests-to-run.txt
 **/test/integration/**/test-results.xml
 **/test/integration/dist/**/*.js
 **/test/integration/dist/**/*.json
-**/test/build/vite/dist/dist/*
-**/test/build/webpack/dist/*
-test/build/*.tgz
+test/*.tgz
 .eslintcache
 src/style-spec/dist/index.cjs
 src/style-spec/dist/index.d.ts

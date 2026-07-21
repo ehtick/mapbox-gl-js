@@ -1,19 +1,16 @@
 {
-  "name": "webpack-build-test",
+  "name": "bundler-webpack-umd",
   "private": true,
   "version": "0.0.0",
-  "main": "index.js",
   "scripts": {
-    "build": "./pretest.sh && webpack --mode=development",
-    "test": "npm run build && node --test"
+    "build": "webpack --mode=development && cp index.html dist/"
   },
   "devDependencies": {
     "@babel/core": "^8.0.1",
     "@babel/preset-env": "^8.0.2",
     "babel-loader": "^10.0.0",
     "webpack": "^5.108.4",
-    "webpack-cli": "^7.2.1",
-    "worker-loader": "^3.0.6"
+    "webpack-cli": "^7.2.1"
   },
   "browserslist": {
     "development": [

@@ -19,7 +19,8 @@
     "./src/style-spec/test.js",
     "./src/style-spec/rollup.config.js",
     "./internal/scripts/**/*",
-    "./plugins/**/rollup.config.ts"
+    "./plugins/**/rollup.config.ts",
+    "./test/bundlers/bundlers.test.ts"
   ],
   "exclude": [
     "./node_modules",
@@ -37,11 +38,8 @@
     "./test/integration/tiles/**/*",
     "./test/integration/tilesets/**/*",
     "./test/integration/lib/operation-handlers.js",
-    "./test/build/vite/**/*",
-    "./test/build/webpack/**/*",
+    "./test/bundlers/*/**/*",
     "./test/build/typings/**/*",
-    "./test/build/scenarios/**/*",
-    "./test/build/browser-check.cjs",
     "./test/build/style-spec.test.js"
   ]
 }

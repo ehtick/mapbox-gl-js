@@ -2,7 +2,7 @@
 set -e
 
 DEST="$(cd "$(dirname "$0")" && pwd)"
-TARBALL_DIR="$DEST/.."
+TARBALL_DIR="$DEST/../.."
 
 "$TARBALL_DIR/pack.sh"
 

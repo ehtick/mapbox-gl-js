@@ -27,8 +27,7 @@
   "workspaces": [
     "src/style-spec",
     "plugins/mapbox-gl-pmtiles-provider",
-    "test/build/vite",
-    "test/build/webpack",
+    "test/bundlers/*",
     "test/build/typings"
   ],
   "devDependencies": {
@@ -134,6 +133,8 @@
     "test-usvg": "vitest --config vitest.config.usvg.ts --run",
     "start-usvg": "esbuild src/data/usvg/usvg_pb_renderer.ts src/data/usvg/usvg_pb_decoder.ts --outdir=src/data/usvg/ --bundle --format=esm --watch --serve=9966 --servedir=.",
     "test-build": "node --test --test-timeout 10000 test/build/*.test.js",
+    "pretest-bundlers": "./test/bundlers/pretest.sh",
+    "test-bundlers": "vitest run --config vitest.config.bundlers.ts",
     "test-esm": "npx vitest run --config vitest.config.esm.ts",
     "test-csp": "npm run build-token && vitest --config vitest.config.csp.ts --run",
     "watch-render": "npx vitest watch --config vitest.config.render.ts",
