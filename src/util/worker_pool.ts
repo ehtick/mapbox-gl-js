@@ -10,7 +10,7 @@ export default class WorkerPool {
     static workerCount: number;
 
     active: Partial<Record<number | string, boolean>>;
-    workers: Array<Worker>;
+    workers: Array<Worker> | null;
     name?: string;
     constructor(name?: string) {
         this.active = {};

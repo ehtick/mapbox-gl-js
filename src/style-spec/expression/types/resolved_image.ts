@@ -1,3 +1,4 @@
+import assert from '../../util/assert';
 import {ImageId} from './image_id';
 import {ImageVariant} from './image_variant';
 
@@ -56,7 +57,10 @@ export default class ResolvedImage {
     }
 
     static from(image: string | ResolvedImage): ResolvedImage {
-        return typeof image === 'string' ? ResolvedImage.build({name: image}) : image;
+        if (typeof image !== 'string') return image;
+        const resolved = ResolvedImage.build({name: image});
+        assert(resolved);
+        return resolved;
     }
 
     static build(

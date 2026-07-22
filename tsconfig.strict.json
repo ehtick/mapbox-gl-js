@@ -105,6 +105,10 @@
     "./3d-style/style/indoor_active_floor_strategy.ts",
     "./src/placement/global_placement_priority.ts",
     "./src/placement/placement_rules.ts",
-    "./src/placement/symbol_source.ts"
+    "./src/placement/symbol_source.ts",
+    "./src/style-spec/error/parsing_error.ts",
+    "./src/util/url.ts",
+    "./src/util/worker_pool.ts",
+    "./src/style-spec/expression/types/resolved_image.ts"
   ]
 }

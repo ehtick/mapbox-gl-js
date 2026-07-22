@@ -11,6 +11,6 @@ export default class ParsingError {
         this.error = error;
         this.message = error.message;
         const match = error.message.match(LINE_NUMBER_RE);
-        this.line = match ? parseInt(match[1], 10) : 0;
+        this.line = match && match[1] ? parseInt(match[1], 10) : 0;
     }
 }
