@@ -1,7 +1,7 @@
 import Point from '@mapbox/point-geometry';
 import assert from '../../style-spec/util/assert';
 import {mat4, vec4} from 'gl-matrix';
-import {clamp, warnOnce} from '../../util/util';
+import {warnOnce} from '../../util/util';
 import CollisionIndex from '../collision_index';
 import ONE_EM from '../one_em';
 import {WritingMode} from '../shaping';
@@ -48,7 +48,6 @@ export class DefaultPlacementAlgorithm implements PlacementAlgorithm {
         bucketPart: BucketPart,
         seenCrossTileIDs: Set<number>,
         showCollisionBoxes: boolean,
-        updateCollisionBoxIfNecessary: boolean,
         scaleFactor: number = 1,
     ): void {
         const {
@@ -80,10 +79,6 @@ export class DefaultPlacementAlgorithm implements PlacementAlgorithm {
         const symbolZOffset = paint.get('symbol-z-offset');
         const elevationFromSea = layout.get('symbol-elevation-reference') === 'sea';
         const symbolPlacement = layout.get('symbol-placement');
-        const [textSizeScaleRangeMin, textSizeScaleRangeMax] = layout.get('text-size-scale-range');
-        const [iconSizeScaleRangeMin, iconSizeScaleRangeMax] = layout.get('icon-size-scale-range');
-        const textScaleFactor = clamp(scaleFactor, textSizeScaleRangeMin, textSizeScaleRangeMax);
-        const iconScaleFactor = clamp(scaleFactor, iconSizeScaleRangeMin, iconSizeScaleRangeMax);
         const textVariableAnchor = layout.get('text-variable-anchor');
 
         const isTextPlacedAlongLine = textRotateWithMap && symbolPlacement !== 'point';
@@ -104,10 +99,6 @@ export class DefaultPlacementAlgorithm implements PlacementAlgorithm {
 
         if (!bucket.collisionArrays && collisionBoxArray) {
             bucket.deserializeCollisionBoxes(collisionBoxArray);
-        }
-
-        if (showCollisionBoxes && updateCollisionBoxIfNecessary) {
-            bucket.updateCollisionDebugBuffers(placement.transform.zoom, collisionBoxArray, textScaleFactor, iconScaleFactor);
         }
 
         const placeSymbol = (symbolInstance: SymbolInstance, boxIndex: number, collisionArrays: CollisionArrays) => {

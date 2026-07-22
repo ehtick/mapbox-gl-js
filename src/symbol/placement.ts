@@ -437,8 +437,8 @@ export class Placement {
         }
     }
 
-    placeLayerBucketPart(bucketPart: BucketPart, seenCrossTileIDs: Set<number>, showCollisionBoxes: boolean, updateCollisionBoxIfNecessary: boolean, scaleFactor: number = 1) {
-        this.algorithm.placeLayerBucketPart(this, bucketPart, seenCrossTileIDs, showCollisionBoxes, updateCollisionBoxIfNecessary, scaleFactor);
+    placeLayerBucketPart(bucketPart: BucketPart, seenCrossTileIDs: Set<number>, showCollisionBoxes: boolean, scaleFactor: number = 1) {
+        this.algorithm.placeLayerBucketPart(this, bucketPart, seenCrossTileIDs, showCollisionBoxes, scaleFactor);
     }
 
     commit(now: number): void {
@@ -504,7 +504,7 @@ export class Placement {
         }
     }
 
-    updateLayerOpacities(styleLayer: TypedStyleLayer, tiles: Array<Tile>, layerIndex: number, replacementSource?: ReplacementSource | null) {
+    updateLayerOpacities(styleLayer: TypedStyleLayer, tiles: Array<Tile>, layerIndex: number, replacementSource?: ReplacementSource | null, showCollisionBoxes: boolean = false, scaleFactor: number = 1) {
         if (replacementSource) {
             this.lastReplacementSourceUpdateTime = replacementSource.updateTime;
         }
@@ -521,6 +521,18 @@ export class Placement {
                     symbolBucket.hdExt.updateRoadElevation(symbolBucket, tile.tileID.canonical);
                 }
                 symbolBucket.updateZOffset();
+
+                // Collision debug boxes encode elevation directly in their vertex data, so they must be
+                // rebuilt here (after zOffset is refreshed above) rather than during placement, otherwise
+                // they'd render one placement cycle behind the actual symbol quads whenever elevation changes.
+                if (showCollisionBoxes && tile.collisionBoxArray) {
+                    const layout = symbolBucket.layers[0].layout;
+                    const [textSizeScaleRangeMin, textSizeScaleRangeMax] = layout.get('text-size-scale-range');
+                    const [iconSizeScaleRangeMin, iconSizeScaleRangeMax] = layout.get('icon-size-scale-range');
+                    const textScaleFactor = clamp(scaleFactor, textSizeScaleRangeMin, textSizeScaleRangeMax);
+                    const iconScaleFactor = clamp(scaleFactor, iconSizeScaleRangeMin, iconSizeScaleRangeMax);
+                    symbolBucket.updateCollisionDebugBuffers(this.transform.zoom, tile.collisionBoxArray, textScaleFactor, iconScaleFactor);
+                }
             }
         }
     }

@@ -10,9 +10,6 @@
       ],
       "image-threshold": [
         {"platform-tag-contains": "", "threshold": 0.0035}
-      ],
-      "skip-test": [
-        {"platform-tag-contains": "web", "reason": "Flaky symbol placement"}
       ]
     }
   },

@@ -4722,7 +4722,7 @@ class Style extends Evented<MapEvents> {
                 if (styleLayer.type !== 'symbol') continue;
                 if (styleLayer.visibility === 'none') continue;
                 const checkAgainstClipLayer = this.isLayerClipped(styleLayer);
-                this.placement.updateLayerOpacities(styleLayer, layerTiles[makeFQID(styleLayer.source, styleLayer.scope)], i, checkAgainstClipLayer ? replacementSource : null);
+                this.placement.updateLayerOpacities(styleLayer, layerTiles[makeFQID(styleLayer.source, styleLayer.scope)], i, checkAgainstClipLayer ? replacementSource : null, showCollisionBoxes, this.map.painter.scaleFactor);
             }
         }
 

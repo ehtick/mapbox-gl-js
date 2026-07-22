@@ -105,7 +105,6 @@ export interface PlacementAlgorithm {
         bucketPart: BucketPart,
         seenCrossTileIDs: Set<number>,
         showCollisionBoxes: boolean,
-        updateCollisionBoxIfNecessary: boolean,
         scaleFactor: number,
     ) => void;
 

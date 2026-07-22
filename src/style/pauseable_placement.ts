@@ -57,7 +57,7 @@ class LayerPlacement {
 
         while (this._currentPartIndex < bucketParts.length) {
             const bucketPart = bucketParts[this._currentPartIndex];
-            placement.placeLayerBucketPart(bucketPart, this._seenCrossTileIDs, showCollisionBoxes, bucketPart.symbolInstanceStart === 0, scaleFactor);
+            placement.placeLayerBucketPart(bucketPart, this._seenCrossTileIDs, showCollisionBoxes, scaleFactor);
             this._currentPartIndex++;
             if (shouldPausePlacement()) {
                 return true;
