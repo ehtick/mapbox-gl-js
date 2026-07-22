@@ -12,7 +12,6 @@ import {
     resetImageRequestQueue
 } from '../../../src/util/ajax';
 import config from '../../../src/util/config';
-import webpSupported from '../../../src/util/webp_supported';
 
 describe('ajax', () => {
     test('getArrayBuffer, 404', async () => {
@@ -313,7 +312,7 @@ describe('ajax', () => {
         expect(onReject.mock.calls[0][0]).toMatchObject({name: 'AbortError'});
     });
 
-    test('getImage sends accept/webp when supported', async () => {
+    test('getImage sends accept/webp', async () => {
         resetImageRequestQueue();
 
         await new Promise<void>(resolve => {
@@ -323,8 +322,6 @@ describe('ajax', () => {
                 resolve();
                 return new Promise<Response>(() => {});
             });
-
-            webpSupported.supported = true;
 
             getImage({url: ''}).catch(() => {});
         });

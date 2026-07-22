@@ -634,7 +634,7 @@ describe('VectorTileSource', () => {
             source.loadTile(tile, () => {});
             expect(transformSpy).toHaveBeenCalledTimes(1);
             expect(transformSpy.mock.calls[0][0]).toEqual(
-                `https://api.mapbox.com/v4/user.map/10/5/5.png?sku=${source.map._requestManager._skuToken}&access_token=key`
+                `https://api.mapbox.com/v4/user.map/10/5/5.webp?sku=${source.map._requestManager._skuToken}&access_token=key`
             );
             expect(transformSpy.mock.calls[0][1]).toEqual('Tile');
         }

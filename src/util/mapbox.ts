@@ -13,7 +13,6 @@
 
 import assert from '../style-spec/util/assert';
 import config from './config';
-import webpSupported from './webp_supported';
 import {isMapboxHTTPURL, isMapboxURL} from './mapbox_url';
 import {createSkuToken, SKU_ID} from './sku_token';
 import {version as sdkVersion} from '../../package.json';
@@ -147,7 +146,8 @@ export class RequestManager {
         if (tileURL && !isMapboxURL(tileURL)) return tileURL;
 
         const urlObject = parseUrl(tileURL);
-        const extension = webpSupported.supported ? '.webp' : '$1';
+        // WebP is supported in all browsers that can run GL JS (which requires WebGL2)
+        const extension = '.webp';
 
         // The v4 mapbox tile API supports 512x512 image tiles but they must be requested as '@2x' tiles.
         const use2xAs512 = rasterTileSize && urlObject.authority !== 'raster' && rasterTileSize === 512;

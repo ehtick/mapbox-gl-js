@@ -1,6 +1,5 @@
 import config from './config';
 import assert from '../style-spec/util/assert';
-import webpSupported from './webp_supported';
 import {warnOnce, isWorker} from './util';
 import {cacheGet, cachePut} from './tile_request_cache';
 import {isMapboxHTTPURL, hasCacheDefeatingSku} from './mapbox_url';
@@ -383,12 +382,10 @@ function acquireImageRequest(signal?: AbortSignal): Promise<() => void> {
 }
 
 export async function getImage(requestParameters: RequestParameters, signal?: AbortSignal): Promise<RequestResponse<ImageBitmap>> {
-    if (webpSupported.supported) {
-        if (!requestParameters.headers) {
-            requestParameters.headers = {};
-        }
-        requestParameters.headers['accept'] = 'image/webp,*/*';
+    if (!requestParameters.headers) {
+        requestParameters.headers = {};
     }
+    requestParameters.headers['accept'] = 'image/webp,*/*';
 
     const release = await acquireImageRequest(signal);
     try {

@@ -232,11 +232,6 @@
       ]
     },
     {
-      "limit": "50 kb",
-      "name": "Debug Module (brotli)",
-      "path": "dist/esm/debug.js"
-    },
-    {
       "gzip": true,
       "limit": "600 kb",
       "name": "UMD bundle (gzip)",

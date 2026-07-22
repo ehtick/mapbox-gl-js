@@ -4,7 +4,6 @@ import {describe, test, beforeEach, afterEach, expect, vi, equalWithPrecision} f
 import {getRequestBody} from '../../util/network';
 import * as mapbox from '../../../src/util/mapbox';
 import config from '../../../src/util/config';
-import webpSupported from '../../../src/util/webp_supported';
 import {uuid} from '../../../src/util/util';
 import {SKU_ID} from '../../../src/util/sku_token';
 import {version} from '../../../package.json';
@@ -130,8 +129,6 @@ describe("mapbox", () => {
                 expect(seenOptions.signal).toBeUndefined();
             });
         });
-
-        webpSupported.supported = false;
 
         describe('.normalizeStyleURL', () => {
             test(
@@ -421,44 +418,33 @@ describe("mapbox", () => {
         });
 
         describe('.normalizeTileURL', () => {
-            test('.normalizeTileURL does nothing on 1x devices', () => {
-                config.API_URL = 'http://path.png';
-                config.REQUIRE_ACCESS_TOKEN = false;
-                webpSupported.supported = false;
-                expect(manager.normalizeTileURL('mapbox://path.png/tile.png')).toEqual(`http://path.png/v4/tile.png`);
-                expect(manager.normalizeTileURL('mapbox://path.png/tile.png32')).toEqual(`http://path.png/v4/tile.png32`);
-                expect(manager.normalizeTileURL('mapbox://path.png/tile.jpg70')).toEqual(`http://path.png/v4/tile.jpg70`);
-            });
-
             test('.normalizeTileURL inserts @2x if source requests it', () => {
                 config.API_URL = 'http://path.png';
                 config.REQUIRE_ACCESS_TOKEN = false;
-                expect(manager.normalizeTileURL('mapbox://path.png/tile.png', true)).toEqual(`http://path.png/v4/tile@2x.png`);
-                expect(manager.normalizeTileURL('mapbox://path.png/tile.png32', true)).toEqual(`http://path.png/v4/tile@2x.png32`);
-                expect(manager.normalizeTileURL('mapbox://path.png/tile.jpg70', true)).toEqual(`http://path.png/v4/tile@2x.jpg70`);
+                expect(manager.normalizeTileURL('mapbox://path.png/tile.png', true)).toEqual(`http://path.png/v4/tile@2x.webp`);
+                expect(manager.normalizeTileURL('mapbox://path.png/tile.png32', true)).toEqual(`http://path.png/v4/tile@2x.webp`);
+                expect(manager.normalizeTileURL('mapbox://path.png/tile.jpg70', true)).toEqual(`http://path.png/v4/tile@2x.webp`);
                 expect(
                     manager.normalizeTileURL('mapbox://path.png/tile.png?access_token=foo', true)
-                ).toEqual(`http://path.png/v4/tile@2x.png?access_token=foo`);
+                ).toEqual(`http://path.png/v4/tile@2x.webp?access_token=foo`);
             });
 
             test('.normalizeTileURL inserts @2x for 512 raster tiles on v4 of the api', () => {
                 config.API_URL = 'http://path.png';
                 config.REQUIRE_ACCESS_TOKEN = false;
-                expect(manager.normalizeTileURL('mapbox://path.png/tile.png', false, 256)).toEqual(`http://path.png/v4/tile.png`);
-                expect(manager.normalizeTileURL('mapbox://path.png/tile.png', false, 512)).toEqual(`http://path.png/v4/tile@2x.png`);
-                expect(manager.normalizeTileURL("mapbox://raster/a.b/0/0/0.png", false, 256)).toEqual(`http://path.png/raster/v1/a.b/0/0/0.png`);
-                expect(manager.normalizeTileURL("mapbox://raster/a.b/0/0/0.png", false, 512)).toEqual(`http://path.png/raster/v1/a.b/0/0/0.png`);
+                expect(manager.normalizeTileURL('mapbox://path.png/tile.png', false, 256)).toEqual(`http://path.png/v4/tile.webp`);
+                expect(manager.normalizeTileURL('mapbox://path.png/tile.png', false, 512)).toEqual(`http://path.png/v4/tile@2x.webp`);
+                expect(manager.normalizeTileURL("mapbox://raster/a.b/0/0/0.png", false, 256)).toEqual(`http://path.png/raster/v1/a.b/0/0/0.webp`);
+                expect(manager.normalizeTileURL("mapbox://raster/a.b/0/0/0.png", false, 512)).toEqual(`http://path.png/raster/v1/a.b/0/0/0.webp`);
             });
 
-            test('.normalizeTileURL replaces img extension with webp on supporting devices', () => {
-                webpSupported.supported = true;
+            test('.normalizeTileURL replaces img extension with webp', () => {
                 config.API_URL = 'http://path.png';
                 config.REQUIRE_ACCESS_TOKEN = false;
                 expect(manager.normalizeTileURL('mapbox://path.png/tile.png')).toEqual(`http://path.png/v4/tile.webp`);
                 expect(manager.normalizeTileURL('mapbox://path.png/tile.png32')).toEqual(`http://path.png/v4/tile.webp`);
                 expect(manager.normalizeTileURL('mapbox://path.png/tile.jpg70')).toEqual(`http://path.png/v4/tile.webp`);
                 expect(manager.normalizeTileURL('mapbox://path.png/tile.png?access_token=foo')).toEqual(`http://path.png/v4/tile.webp?access_token=foo`);
-                webpSupported.supported = false;
             });
 
             test('.normalizeTileURL ignores non-mapbox:// sources', () => {
@@ -506,16 +492,16 @@ describe("mapbox", () => {
                     `https://api.mapbox.com/v4/a.b/0/0/0.pbf?sku=${manager._skuToken}&access_token=key`
                 );
                 expect(manager.normalizeTileURL("mapbox://tiles/a.b/0/0/0.png")).toEqual(
-                    `https://api.mapbox.com/v4/a.b/0/0/0.png?sku=${manager._skuToken}&access_token=key`
+                    `https://api.mapbox.com/v4/a.b/0/0/0.webp?sku=${manager._skuToken}&access_token=key`
                 );
                 expect(manager.normalizeTileURL("mapbox://tiles/a.b/0/0/0@2x.png")).toEqual(
-                    `https://api.mapbox.com/v4/a.b/0/0/0@2x.png?sku=${manager._skuToken}&access_token=key`
+                    `https://api.mapbox.com/v4/a.b/0/0/0@2x.webp?sku=${manager._skuToken}&access_token=key`
                 );
                 expect(manager.normalizeTileURL("mapbox://tiles/a.b,c.d/0/0/0.pbf")).toEqual(
                     `https://api.mapbox.com/v4/a.b,c.d/0/0/0.pbf?sku=${manager._skuToken}&access_token=key`
                 );
                 expect(manager.normalizeTileURL("mapbox://raster/a.b/0/0/0.png")).toEqual(
-                    `https://api.mapbox.com/raster/v1/a.b/0/0/0.png?sku=${manager._skuToken}&access_token=key`
+                    `https://api.mapbox.com/raster/v1/a.b/0/0/0.webp?sku=${manager._skuToken}&access_token=key`
                 );
                 expect(manager.normalizeTileURL("mapbox://rasterarrays/a.b/0/0/0.mrt")).toEqual(
                     `https://api.mapbox.com/rasterarrays/v1/a.b/0/0/0.mrt?sku=${manager._skuToken}&access_token=key`
@@ -526,13 +512,11 @@ describe("mapbox", () => {
 
                 config.API_URL = 'https://api.example.com/';
                 expect(manager.normalizeTileURL("mapbox://tiles/a.b/0/0/0.png")).toEqual(
-                    `https://api.example.com/v4/a.b/0/0/0.png?sku=${manager._skuToken}&access_token=key`
+                    `https://api.example.com/v4/a.b/0/0/0.webp?sku=${manager._skuToken}&access_token=key`
                 );
                 expect(manager.normalizeTileURL("http://path")).toEqual("http://path");
             });
         });
-
-        webpSupported.supported = true;
     });
 
     describe('TelemetryEvent', () => {

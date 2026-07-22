@@ -34,7 +34,6 @@ import {RGBAImage} from '../util/image';
 import {Event, ErrorEvent} from '../util/evented';
 import {MapMouseEvent} from './events';
 import TaskQueue from '../util/task_queue';
-import webpSupported from '../util/webp_supported';
 import {PerformanceUtils, PerformanceMarkers} from '../util/performance';
 import {LivePerformanceMarkers, LivePerformanceUtils} from '../util/live_performance';
 import EasedVariable from '../util/eased_variable';
@@ -4395,8 +4394,6 @@ export class Map extends Camera {
                 this.painter.setTileLoadedFlag(true);
             }
         });
-
-        webpSupported.testSupport(gl);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
