@@ -184,7 +184,10 @@ async function setupStandard(painter?: Painter) {
     Object.assign(prepare, {
         model: Standard.prepare,
     });
-    if (painter && !painter._shadowRenderer) {
+    // The Standard module loads asynchronously (a lazy import in ESM builds), so the
+    // map may have been removed while it was still loading — bail out to avoid touching
+    // a destroyed WebGL context.
+    if (painter && !painter._destroyed && !painter._shadowRenderer) {
         const SR = (Standard as {ShadowRenderer?: new (p: Painter) => ShadowRenderer}).ShadowRenderer;
         if (SR) painter._shadowRenderer = new SR(painter);
     }
@@ -276,6 +279,7 @@ class Painter {
     _fogVisible: boolean;
     _cachedTileFogOpacities: Record<number, [number, number]>;
     _shadowRenderer?: ShadowRenderer;
+    _destroyed?: boolean;
     _devtools?: IDevTools;
     _wireframeDebugCache: WireframeDebugCache;
 
@@ -1909,6 +1913,8 @@ class Painter {
         if (this.emptyDepthTexture) {
             this.emptyDepthTexture.destroy();
         }
+
+        this._destroyed = true;
     }
 
     prepareDrawTile() {

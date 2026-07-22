@@ -9,7 +9,7 @@ export default mergeConfig(baseConfig, defineConfig({
         // Opt-in embedding of passed-test images in the report (local dev only;
         // forced off on CI to keep the report small).
         'import.meta.env.VITE_EMBED_PASSED_IMAGES': JSON.stringify(String(!isCI && process.env.EMBED_PASSED_IMAGES === 'true')),
-        'import.meta.env.VITE_DIST_BUNDLE': JSON.stringify('dev'),
+        'import.meta.env.VITE_DIST_BUNDLE': JSON.stringify(process.env.QUERY_BUNDLE || 'esm'),
     },
     test: {
         include: ['test/integration/query-tests/index.test.ts'],

@@ -7,7 +7,7 @@ import {integrationTests, setupIntegrationTestsMiddlewares, serveDistPlugin, sui
 import type {BrowserConfigOptions} from 'vitest/node';
 
 const renderBrowser = process.env.RENDER_BROWSER || 'chromium';
-const bundle = process.env.RENDER_BUNDLE || 'dev';
+const bundle = process.env.RENDER_BUNDLE || 'esm';
 
 const getAngle = () => {
     if (os.platform() === 'darwin' && os.arch() === 'arm64') return '--use-angle=metal';

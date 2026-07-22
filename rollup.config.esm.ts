@@ -121,7 +121,7 @@ function assertWorkerChunkIsolation(): Plugin {
         name: 'assert-worker-chunk-isolation',
         generateBundle(_options, bundle) {
             const chunks = Object.values(bundle).filter(output => output.type === 'chunk');
-            const workerEntry = chunks.find(chunk => chunk.isEntry && chunk.facadeModuleId && chunk.facadeModuleId.endsWith('/src/source/worker.ts'));
+            const workerEntry = chunks.find(chunk => chunk.isEntry && chunk.facadeModuleId && chunk.facadeModuleId.replace(/\\/g, '/').endsWith('/src/source/worker.ts'));
             if (!workerEntry) {
                 this.error('worker entry chunk not found — cannot verify main/worker chunk isolation');
                 return;

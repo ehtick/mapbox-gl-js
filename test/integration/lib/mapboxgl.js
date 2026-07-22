@@ -18,6 +18,12 @@ if (typeof import.meta.env !== 'undefined' && import.meta.env.VITE_DIST_BUNDLE =
     await import(/* @vite-ignore */ modulePath);
 
     mapboxgl = globalThis.mapboxgl;
+} else if (typeof import.meta.env !== 'undefined' && import.meta.env.VITE_DIST_BUNDLE === 'esm') {
+    modulePath = '../../../dist/esm-dev/mapbox-gl.js';
+    mapboxgl = await import(/* @vite-ignore */ modulePath);
+} else if (typeof import.meta.env !== 'undefined' && import.meta.env.VITE_DIST_BUNDLE === 'esm-prod') {
+    modulePath = '../../../dist/esm/mapbox-gl.js';
+    mapboxgl = await import(/* @vite-ignore */ modulePath);
 } else {
 
     mapboxgl = globalThis.mapboxgl;
