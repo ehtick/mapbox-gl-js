@@ -40,7 +40,7 @@
             "orientation": [0, 0, 0],
             "materialOverrides": {
               "body": {
-                "model-color": [0.00775, 0.03458, 0.43854],
+                "model-color": "rgba(2, 9, 112, 1)",
                 "model-color-mix-intensity": 1.0
               },
               "lights_brakes": {
@@ -48,8 +48,8 @@
                 "model-color-mix-intensity": 1.0,
                 "model-emissive-strength": 0.8
               },
-                  "lights-brakes_reverse": {
-                "model-color": [0.88, 0.0, 0.0],
+              "lights-brakes_reverse": {
+                "model-color":  [0.88, 0.0, 0.0],
                 "model-color-mix-intensity": 1.0,
                 "model-emissive-strength": 0.8
               }

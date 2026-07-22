@@ -261,7 +261,7 @@ class ModelSource extends Evented<SourceEvents> implements ISource {
         }
         Object.entries(overrides).forEach(([key, value]) => {
 
-            const modelColor = value['model-color'] as number[];
+            const modelColor = ModelSource.arrayFromColorSpecification(value['model-color'] as ColorSpecification | undefined);
             const materialOverride: MaterialOverride = {
                 color: modelColor !== undefined ? new Color(modelColor[0], modelColor[1], modelColor[2]) : new Color(1, 1, 1),
                 colorMix: 0,
