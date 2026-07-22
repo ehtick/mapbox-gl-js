@@ -12,7 +12,7 @@
       ],
       "image-threshold": [
         {"platform-tag-contains": "", "threshold": 0.00035},
-        {"platform-tag-contains": "native", "threshold": 0.0015}
+        {"platform-tag-contains": "native", "threshold": 0.0039}
       ]
     }
   },

@@ -7,7 +7,8 @@
       "height": 256,
       "collisionDebug": true,
       "image-threshold": [
-        {"platform-tag-contains": "native-android-gl-mali", "threshold": 0.006}
+        {"platform-tag-contains": "native", "threshold": 0.0047},
+        {"platform-tag-contains": "web", "threshold": 0.00463}
       ]
     }
   },

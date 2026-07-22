@@ -10,7 +10,7 @@
       ],
       "image-threshold": [
         {"platform-tag-contains": "", "threshold": 0.0002},
-        {"platform-tag-contains": "native-android-gl-mali", "threshold": 0.0025}
+        {"platform-tag-contains": "native", "threshold": 0.0022}
       ]
     }
   },

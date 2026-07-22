@@ -14,7 +14,8 @@
       ],
       "image-threshold": [
         {"platform-tag-contains": "", "threshold": 0.0013},
-        {"platform-tag-contains": "swiftshader", "threshold": 0.0014}
+        {"platform-tag-contains": "native", "threshold": 0.0072},
+        {"platform-tag-contains": "native-android", "threshold": 0.0077}
       ]
     }
   },

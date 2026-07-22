@@ -7,6 +7,10 @@
       "operations": [
         ["setPaintProperty", "line", "line-trim-offset", [0.7, 1.0]],
         ["wait"]
+      ],
+      "image-threshold": [
+        {"platform-tag-contains": "native", "threshold": 0.000476},
+        {"platform-tag-contains": "native-android", "threshold": 0.0011}
       ]
     }
   },

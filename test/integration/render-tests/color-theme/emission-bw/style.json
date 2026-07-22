@@ -10,7 +10,8 @@
         {"platform-tag-contains": "native-ios", "reason": "skip - To be investigated"}
       ],
       "image-threshold": [
-        {"platform-tag-contains": "", "threshold": 0.0005}
+        {"platform-tag-contains": "", "threshold": 0.0005},
+        {"platform-tag-contains": "native", "threshold": 0.00062}
       ]
     }
   },

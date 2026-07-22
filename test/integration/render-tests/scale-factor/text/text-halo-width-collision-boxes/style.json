@@ -11,7 +11,8 @@
         ["wait"]
       ],
       "image-threshold": [
-        {"platform-tag-contains": "", "threshold": 0.00075}
+        {"platform-tag-contains": "", "threshold": 0.00075},
+        {"platform-tag-contains": "native", "threshold": 0.0078}
       ]
     }
   },

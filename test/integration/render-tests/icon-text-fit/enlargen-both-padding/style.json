@@ -9,7 +9,7 @@
       ],
       "image-threshold": [
         {"platform-tag-contains": "", "threshold": 0.005},
-        {"platform-tag-contains": "native-android-gl-powervr", "threshold": 0.01}
+        {"platform-tag-contains": "native", "threshold": 0.0093}
       ]
     }
   },

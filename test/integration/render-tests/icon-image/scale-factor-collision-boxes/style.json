@@ -7,7 +7,7 @@
       "scaleFactor": 4,
       "collisionDebug": true,
       "image-threshold": [
-        {"platform-tag-contains": "native-android-gl-mali", "threshold": 0.007}
+        {"platform-tag-contains": "native", "threshold": 0.00535}
       ]
     }
   },

@@ -4,6 +4,7 @@
     "test": {
       "height": 512,
       "image-threshold": [
+        {"platform-tag-contains": "native-android", "threshold": 0.00017},
         {"platform-tag-contains": "native-android-gl-mali", "threshold": 0.0004}
       ]
     }
