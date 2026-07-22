@@ -85,6 +85,26 @@
     "./src/style-spec/deref.ts",
     "./src/style-spec/util/lerp.ts",
     "./src/style-spec/util/color.ts",
-    "./src/style-spec/util/interpolate.ts"
+    "./src/style-spec/util/interpolate.ts",
+    "./3d-style/data/bucket/building_bucket_flags.ts",
+    "./src/gl/color_mode.ts",
+    "./src/render/occlusion_params.ts",
+    "./src/source/render_source_type.ts",
+    "./src/util/classify_rings.ts",
+    "./src/util/web_worker.ts",
+    "./src/util/web_worker_esm_cdn.ts",
+    "./src/util/web_worker_esm_npm.ts",
+    "./src/placement/geometry.ts",
+    "./src/placement/types.ts",
+    "./src/precipitation/precipitation_reveal_params.ts",
+    "./src/style-spec/migrate/v9.ts",
+    "./src/style-spec/util/color_spaces.ts",
+    "./src/style-spec/util/mercator.ts",
+    "./src/style-spec/expression/types/image_variant.ts",
+    "./3d-style/data/frc_road_classes.ts",
+    "./3d-style/style/indoor_active_floor_strategy.ts",
+    "./src/placement/global_placement_priority.ts",
+    "./src/placement/placement_rules.ts",
+    "./src/placement/symbol_source.ts"
   ]
 }
