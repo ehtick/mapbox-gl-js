@@ -137,6 +137,7 @@
     "test-bundlers": "vitest run --config vitest.config.bundlers.ts",
     "test-esm": "npx vitest run --config vitest.config.esm.ts",
     "test-csp": "npm run build-token && vitest --config vitest.config.csp.ts --run",
+    "prewatch-render": "npm run build-dev",
     "watch-render": "npx vitest watch --config vitest.config.render.ts",
     "pretest-render": "npm run build-esm-dev",
     "test-render": "npx vitest run --config vitest.config.render.ts",
