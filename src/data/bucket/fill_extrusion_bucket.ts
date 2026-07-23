@@ -1213,9 +1213,9 @@ class FillExtrusionBucket implements BucketWithGroundEffect {
                         const q = p1.clone();
 
                         if (edgeRadius) {
-                            nb = p2.sub(p1)._perp()._unit();
-                            const nm = na.add(nb)._unit();
-                            const cosHalfAngle = na.x * nm.x + na.y * nm.y;
+                            nb = getEdgeNormal(p1, p2, na);
+                            const nm = getBisector(na, nb);
+                            const cosHalfAngle = getCosHalfAngle(na, nb);
                             const offset = edgeRadius * Math.min(4, 1 / cosHalfAngle);
                             q.x += offset * nm.x;
                             q.y += offset * nm.y;
@@ -1351,13 +1351,13 @@ class FillExtrusionBucket implements BucketWithGroundEffect {
                     // (drawing isn't exact but hopefully gets the point across).
 
                     if (edgeRadius) {
-                        nb = p2.sub(p1)._perp()._unit();
+                        nb = getEdgeNormal(p1, p2, na);
 
                         const cosHalfAngle = getCosHalfAngle(na, nb);
                         let offsetNext = _getRoundedEdgeOffset(p0, p1, p2, cosHalfAngle, edgeRadius);
 
                         if (isNaN(offsetNext)) offsetNext = 0;
-                        const nEdge = p1.sub(p0)._unit();
+                        const nEdge = getEdgeDirection(p0, p1, new Point(0, 0));
                         p0 = p0.add(nEdge.mult(offsetPrev))._round();
                         p1 = p1.add(nEdge.mult(-offsetNext))._round();
                         offsetPrev = offsetNext;
@@ -2027,15 +2027,41 @@ class FillExtrusionBucket implements BucketWithGroundEffect {
     }
 }
 
+// Unit vector from `from` to `to`, falling back to `fallback` when the two points coincide
+function getEdgeDirection(from: Point, to: Point, fallback: Point): Point {
+    return from.equals(to) ? fallback : to.sub(from)._unit();
+}
+
+// Normal of the edge from `from` to `to`, falling back to `fallback` when the two points coincide.
+function getEdgeNormal(from: Point, to: Point, fallback: Point): Point {
+    return from.equals(to) ? fallback : to.sub(from)._perp()._unit();
+}
+
+// Bisector of na and nb, falling back to na when they're exactly opposite
+// where the bisector would otherwise be a divide-by-zero
+function getBisector(na: Point, nb: Point): Point {
+    const sum = na.add(nb);
+    const mag = sum.mag();
+    return mag === 0 ? na : sum.div(mag);
+}
+
 function getCosHalfAngle(na: Point, nb: Point) {
-    const nm = na.add(nb)._unit();
-    const cosHalfAngle = na.x * nm.x + na.y * nm.y;
-    return cosHalfAngle;
+    const nm = getBisector(na, nb);
+    return na.x * nm.x + na.y * nm.y;
 }
 
 function getRoundedEdgeOffset(p0: Point, p1: Point, p2: Point, edgeRadius: number) {
-    const na = p1.sub(p0)._perp()._unit();
-    const nb = p2.sub(p1)._perp()._unit();
+    // p0 can coincide with p1
+    // fall back to the other edge's normal rather than dividing by zero.
+    let na: Point;
+    let nb: Point;
+    if (p0.equals(p1)) {
+        nb = getEdgeNormal(p1, p2, new Point(0, 0));
+        na = nb;
+    } else {
+        na = p1.sub(p0)._perp()._unit();
+        nb = getEdgeNormal(p1, p2, na);
+    }
     const cosHalfAngle = getCosHalfAngle(na, nb);
     return _getRoundedEdgeOffset(p0, p1, p2, cosHalfAngle, edgeRadius);
 }
