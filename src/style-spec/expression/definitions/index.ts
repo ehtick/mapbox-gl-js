@@ -8,6 +8,7 @@ import {
     ErrorType,
     CollatorType,
     array,
+    isValidNativeType,
     toString as typeToString,
 } from '../types';
 import {typeOf, Color, validateRGBA, validateHSLA, toString as valueToString} from '../values';
@@ -20,12 +21,9 @@ import Assertion from './assertion';
 import Coercion from './coercion';
 import At from './at';
 import AtInterpolated from './at_interpolated';
-import In from './in';
-import IndexOf from './index_of';
 import Match from './match';
 import Case from './case';
 import Slice from './slice';
-import Split from './split';
 import Step from './step';
 import Interpolate from './interpolate';
 import Coalesce from './coalesce';
@@ -70,8 +68,6 @@ const expressions: ExpressionRegistry = {
     'collator': CollatorExpression,
     'format': FormatExpression,
     'image': ImageExpression,
-    'in': In,
-    'index-of': IndexOf,
     'interpolate': Interpolate,
     'interpolate-hcl': Interpolate,
     'interpolate-lab': Interpolate,
@@ -92,8 +88,7 @@ const expressions: ExpressionRegistry = {
     'var': Var,
     'within': Within,
     'distance': Distance,
-    'config': Config,
-    'split': Split
+    'config': Config
 };
 
 function rgba(ctx: EvaluationContext, [r, g, b, a]: Expression[]) {
@@ -153,6 +148,17 @@ function binarySearch(v: unknown, a: Record<number, unknown>, i: number, j: numb
 
 function varargs(type: Type): Varargs {
     return {type};
+}
+
+// Shared runtime type validation for `in` and `index-of`, whose needle and
+// haystack arguments are parsed as ValueType and checked at evaluation time.
+function assertNeedleHaystack(needle: Value, haystack: Value) {
+    if (!isValidNativeType(needle, ['boolean', 'string', 'number', 'null'])) {
+        throw new RuntimeError(`Expected first argument to be of type boolean, string, number or null, but found ${typeToString(typeOf(needle))} instead.`);
+    }
+    if (!isValidNativeType(haystack, ['string', 'array'])) {
+        throw new RuntimeError(`Expected second argument to be of type array or string, but found ${typeToString(typeOf(haystack))} instead.`);
+    }
 }
 
 function hashString(str: string) {
@@ -716,6 +722,49 @@ CompoundExpression.register(expressions, {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         (ctx, args) => args.map(arg => valueToString(arg.evaluate(ctx))).join('')
     ],
+    'split': [
+        array(StringType),
+        [StringType, StringType],
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return
+        (ctx, [str, delimiter]) => str.evaluate(ctx).split(delimiter.evaluate(ctx))
+    ],
+    'in': [
+        BooleanType,
+        [ValueType, ValueType],
+        (ctx, [needleExpr, haystackExpr]) => {
+            const needle = needleExpr.evaluate(ctx) as Value;
+            const haystack = haystackExpr.evaluate(ctx) as Value;
+            if (haystack == null) return false;
+            assertNeedleHaystack(needle, haystack);
+            // Type assertions safe due to assertNeedleHaystack checks above
+            return (haystack as string | unknown[]).includes(needle as string);
+        }
+    ],
+    'index-of': {
+        type: NumberType,
+        overloads: [
+            [
+                [ValueType, ValueType],
+                (ctx, [needleExpr, haystackExpr]) => {
+                    const needle = needleExpr.evaluate(ctx) as Value;
+                    const haystack = haystackExpr.evaluate(ctx) as Value;
+                    assertNeedleHaystack(needle, haystack);
+                    // Type assertions safe due to assertNeedleHaystack checks above
+                    return (haystack as string | unknown[]).indexOf(needle as string);
+                }
+            ], [
+                [ValueType, ValueType, NumberType],
+                (ctx, [needleExpr, haystackExpr, fromIndexExpr]) => {
+                    const needle = needleExpr.evaluate(ctx) as Value;
+                    const haystack = haystackExpr.evaluate(ctx) as Value;
+                    const fromIndex = fromIndexExpr.evaluate(ctx) as number;
+                    assertNeedleHaystack(needle, haystack);
+                    // Type assertions safe due to assertNeedleHaystack checks above
+                    return (haystack as string | unknown[]).indexOf(needle as string, fromIndex);
+                }
+            ]
+        ]
+    },
     'resolved-locale': [
         StringType,
         [CollatorType],
