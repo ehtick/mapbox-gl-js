@@ -2611,13 +2611,11 @@ class Style extends Evented<MapEvents> {
     }
 
     getOwnSources(): Source[] {
-        const sources = [];
+        const sources: Source[] = [];
         for (const id in this._otherSourceCaches) {
             const sourceCache = this.getOwnSourceCache(id);
             if (sourceCache) sources.push(sourceCache.getSource());
         }
-
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return sources;
     }
 
@@ -2736,14 +2734,13 @@ class Style extends Evented<MapEvents> {
 
     getLights(): Array<LightsSpecification> | null | undefined {
         if (!this.enable3dLights()) return null;
-        const lights = [];
+        const lights: LightsSpecification[] = [];
         if (this.directionalLight) {
             lights.push(this.directionalLight.get());
         }
         if (this.ambientLight) {
             lights.push(this.ambientLight.get());
         }
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return lights;
     }
 
@@ -2840,13 +2837,11 @@ class Style extends Evented<MapEvents> {
             return [];
         }
 
-        const layers = [];
+        const layers: TypedStyleLayer[] = [];
         for (const selector of featuresets[featuresetId].selectors) {
             const layer = style.getOwnLayer(selector.layer);
             if (layer) layers.push(layer);
         }
-
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return layers;
     }
 
@@ -3903,7 +3898,7 @@ class Style extends Evented<MapEvents> {
 
         const features = this.queryRenderedTargets(queryGeometry, targets, transform);
 
-        const targetFeatures = [];
+        const targetFeatures: TargetFeature[] = [];
         const uniqueFeatureSet = new Set<string>();
         for (const feature of features) {
             for (const variant of feature.variants[targetId]) {
@@ -3913,8 +3908,6 @@ class Style extends Evented<MapEvents> {
                 targetFeatures.push(new TargetFeature(feature, variant));
             }
         }
-
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return targetFeatures;
     }
 
@@ -4938,13 +4931,11 @@ class Style extends Evented<MapEvents> {
     }
 
     getSources(): Source[] {
-        const sources = [];
+        const sources: Source[] = [];
         for (const id in this._mergedOtherSourceCaches) {
             const sourceCache = this._mergedOtherSourceCaches[id];
             if (sourceCache) sources.push(sourceCache.getSource());
         }
-
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return sources;
     }
 
@@ -4991,24 +4982,13 @@ class Style extends Evented<MapEvents> {
         if (fqid == null)
             return Object.values(this._mergedSourceCaches);
 
-        const sourceCaches = [];
-        if (this._mergedOtherSourceCaches[fqid]) {
-            sourceCaches.push(this._mergedOtherSourceCaches[fqid]);
-        }
-        if (this._mergedSymbolSourceCaches[fqid]) {
-            sourceCaches.push(this._mergedSymbolSourceCaches[fqid]);
-        }
-        if (this._mergedFillExtrusionSourceCaches[fqid]) {
-            sourceCaches.push(this._mergedFillExtrusionSourceCaches[fqid]);
-        }
-        if (this._mergedHdRoadCoverageSourceCaches[fqid]) {
-            sourceCaches.push(this._mergedHdRoadCoverageSourceCaches[fqid]);
-        }
-        if (this._mergedHdRoadElevationSourceCaches[fqid]) {
-            sourceCaches.push(this._mergedHdRoadElevationSourceCaches[fqid]);
-        }
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return sourceCaches;
+        return [
+            this._mergedOtherSourceCaches[fqid],
+            this._mergedSymbolSourceCaches[fqid],
+            this._mergedFillExtrusionSourceCaches[fqid],
+            this._mergedHdRoadCoverageSourceCaches[fqid],
+            this._mergedHdRoadElevationSourceCaches[fqid],
+        ].filter(Boolean);
     }
 
     updateSourceCaches() {
@@ -5052,24 +5032,13 @@ class Style extends Evented<MapEvents> {
     }
 
     getOwnSourceCaches(source: string): Array<SourceCache> {
-        const sourceCaches = [];
-        if (this._otherSourceCaches[source]) {
-            sourceCaches.push(this._otherSourceCaches[source]);
-        }
-        if (this._symbolSourceCaches[source]) {
-            sourceCaches.push(this._symbolSourceCaches[source]);
-        }
-        if (this._fillExtrusionSourceCaches[source]) {
-            sourceCaches.push(this._fillExtrusionSourceCaches[source]);
-        }
-        if (this._hdCoverage && this._hdCoverage.coverageSourceCaches[source]) {
-            sourceCaches.push(this._hdCoverage.coverageSourceCaches[source]);
-        }
-        if (this._hdElevation && this._hdElevation.elevationSourceCaches[makeFQID(source, this.scope)]) {
-            sourceCaches.push(this._hdElevation.elevationSourceCaches[makeFQID(source, this.scope)]);
-        }
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return sourceCaches;
+        return [
+            this._otherSourceCaches[source],
+            this._symbolSourceCaches[source],
+            this._fillExtrusionSourceCaches[source],
+            this._hdCoverage && this._hdCoverage.coverageSourceCaches[source],
+            this._hdElevation && this._hdElevation.elevationSourceCaches[makeFQID(source, this.scope)],
+        ].filter(Boolean);
     }
 
     // Returns true if HD module isn't loaded yet and the layer needs a coverage source

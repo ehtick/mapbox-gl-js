@@ -72,6 +72,8 @@ type InstancingUniformType = {
 const instancingUniforms = (context: Context): InstancingUniformType => ({
     'u_instanceID': new Uniform1i(context)});
 
+type UniformGroupKey = 'terrainUniforms' | 'globeUniforms' | 'fogUniforms' | 'cutoffUniforms' | 'lightsUniforms' | 'shadowUniforms';
+
 class Program<Us extends UniformBindings> {
     program: WebGLProgram;
     attributes: Record<string, number>;
@@ -80,12 +82,12 @@ class Program<Us extends UniformBindings> {
     fixedUniformsEntries: ReadonlyArray<[string, IUniform<unknown>]>;
     binderUniforms: Array<BinderUniform>;
     failedToCreate: boolean;
-    terrainUniforms: TerrainUniformsType | null | undefined;
-    fogUniforms: FogUniformsType | null | undefined;
-    cutoffUniforms: CutoffUniformsType | null | undefined;
-    lightsUniforms: LightsUniformsType | null | undefined;
-    globeUniforms: GlobeUniformsType | null | undefined;
-    shadowUniforms: ShadowUniformsType | null | undefined;
+    terrainUniforms: TerrainUniformsType | undefined;
+    fogUniforms: FogUniformsType | undefined;
+    cutoffUniforms: CutoffUniformsType | undefined;
+    lightsUniforms: LightsUniformsType | undefined;
+    globeUniforms: GlobeUniformsType | undefined;
+    shadowUniforms: ShadowUniformsType | undefined;
 
     name: ProgramName;
     configuration: ProgramConfiguration | null | undefined;
@@ -93,7 +95,7 @@ class Program<Us extends UniformBindings> {
 
     // Manually handle instancing by issuing draw calls and replacing gl_InstanceID with uniform
     forceManualRenderingForInstanceIDShaders: boolean;
-    instancingUniforms: InstancingUniformType | null | undefined;
+    instancingUniforms: InstancingUniformType | undefined;
 
     _pending: boolean;
     _context: Context;
@@ -319,91 +321,42 @@ class Program<Us extends UniformBindings> {
         return location;
     }
 
-    setTerrainUniformValues(context: Context, terrainUniformValues: UniformValues<TerrainUniformsType>) {
+    // Reads the uniform binding via `key` rather than taking it as an argument, because
+    // the binding is created lazily in _finalize() — it must be read after _ensureReady().
+    _setUniformGroup(context: Context, key: UniformGroupKey, values: UniformValues<UniformBindings>) {
         this._ensureReady();
-        if (!this.terrainUniforms) return;
-        const uniforms: TerrainUniformsType = this.terrainUniforms;
-
-        if (this.failedToCreate) return;
+        const uniforms = this[key] as UniformBindings | undefined;
+        if (this.failedToCreate || !uniforms) return;
         context.program.set(this.program);
 
-        for (const name in terrainUniformValues) {
-            if (uniforms[name]) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-                uniforms[name].set(this.program, name, terrainUniformValues[name]);
-            }
+        for (const name in values) {
+            const uniform = uniforms[name];
+            if (uniform) uniform.set(this.program, name, values[name]);
         }
+    }
+
+    setTerrainUniformValues(context: Context, terrainUniformValues: UniformValues<TerrainUniformsType>) {
+        this._setUniformGroup(context, 'terrainUniforms', terrainUniformValues);
     }
 
     setGlobeUniformValues(context: Context, globeUniformValues: UniformValues<GlobeUniformsType>) {
-        this._ensureReady();
-        if (!this.globeUniforms) return;
-        const uniforms: GlobeUniformsType = this.globeUniforms;
-
-        if (this.failedToCreate) return;
-        context.program.set(this.program);
-
-        for (const name in globeUniformValues) {
-            if (uniforms[name]) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-                uniforms[name].set(this.program, name, globeUniformValues[name]);
-            }
-        }
+        this._setUniformGroup(context, 'globeUniforms', globeUniformValues);
     }
 
     setFogUniformValues(context: Context, fogUniformValues: UniformValues<FogUniformsType>) {
-        this._ensureReady();
-        if (!this.fogUniforms) return;
-        const uniforms: FogUniformsType = this.fogUniforms;
-
-        if (this.failedToCreate) return;
-        context.program.set(this.program);
-
-        for (const name in fogUniformValues) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-            uniforms[name].set(this.program, name, fogUniformValues[name]);
-        }
+        this._setUniformGroup(context, 'fogUniforms', fogUniformValues);
     }
 
     setCutoffUniformValues(context: Context, cutoffUniformValues: UniformValues<CutoffUniformsType>) {
-        this._ensureReady();
-        if (!this.cutoffUniforms) return;
-        const uniforms: CutoffUniformsType = this.cutoffUniforms;
-
-        if (this.failedToCreate) return;
-        context.program.set(this.program);
-
-        for (const name in cutoffUniformValues) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-            uniforms[name].set(this.program, name, cutoffUniformValues[name]);
-        }
+        this._setUniformGroup(context, 'cutoffUniforms', cutoffUniformValues);
     }
 
     setLightsUniformValues(context: Context, lightsUniformValues: UniformValues<LightsUniformsType>) {
-        this._ensureReady();
-        if (!this.lightsUniforms) return;
-        const uniforms: LightsUniformsType = this.lightsUniforms;
-
-        if (this.failedToCreate) return;
-        context.program.set(this.program);
-
-        for (const name in lightsUniformValues) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-            uniforms[name].set(this.program, name, lightsUniformValues[name]);
-        }
+        this._setUniformGroup(context, 'lightsUniforms', lightsUniformValues);
     }
 
     setShadowUniformValues(context: Context, shadowUniformValues: UniformValues<ShadowUniformsType>) {
-        this._ensureReady();
-        if (this.failedToCreate || !this.shadowUniforms) return;
-
-        const uniforms: ShadowUniformsType = this.shadowUniforms;
-        context.program.set(this.program);
-
-        for (const name in shadowUniformValues) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-            uniforms[name].set(this.program, name, shadowUniformValues[name]);
-        }
+        this._setUniformGroup(context, 'shadowUniforms', shadowUniformValues);
     }
 
     _drawDebugWireframe(painter: Painter, depthMode: Readonly<DepthMode>,
