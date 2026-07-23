@@ -10,8 +10,6 @@ import {rasterParticleUniformValues, rasterParticleTextureUniformValues, rasterP
 } from './program/raster_particle_program';
 import {computeRasterColorMix, computeRasterColorOffset} from './raster';
 import {COLOR_RAMP_RES} from '../style/style_layer/raster_particle_style_layer';
-import RasterArrayTile from '../source/raster_array_tile';
-import RasterArrayTileSource from '../source/raster_array_tile_source';
 import {neighborCoord} from '../source/tile_id';
 import {
     calculateGlobeMercatorMatrix,
@@ -32,6 +30,8 @@ import {GLOBE_ZOOM_THRESHOLD_MAX} from '../geo/projection/globe_constants';
 
 import type Transform from '../geo/transform';
 import type {OverscaledTileID} from '../source/tile_id';
+import type RasterArrayTile from '../source/raster_array_tile';
+import type RasterArrayTileSource from '../source/raster_array_tile_source';
 import type RasterParticleStyleLayer from '../style/style_layer/raster_particle_style_layer';
 import type SourceCache from '../source/source_cache';
 import type Painter from './painter';
@@ -92,7 +92,7 @@ function renderParticlesToTexture(painter: Painter, sourceCache: SourceCache, la
     const context = painter.context;
     const gl = context.gl;
     const source = sourceCache.getSource();
-    if (!(source instanceof RasterArrayTileSource)) return;
+    if (source.type !== 'raster-array') return;
 
     // update layer resources
 
@@ -118,8 +118,8 @@ function renderParticlesToTexture(painter: Painter, sourceCache: SourceCache, la
 
     const tiles: Array<[OverscaledTileID, TileData, RasterParticleState, boolean]> = [];
     for (const id of tileIDs) {
-        const tile = sourceCache.getTile(id);
-        if (!(tile instanceof RasterArrayTile)) continue;
+        const tile = sourceCache.getTile(id) as RasterArrayTile;
+        if (!tile) continue;
 
         const data = getTileData(tile, source, layer);
         if (!data) continue;
@@ -546,7 +546,7 @@ function cutoffParamsForElevation(tr: Transform): [number, number, number, numbe
 
 export function prepare(layer: RasterParticleStyleLayer, sourceCache: SourceCache, _: Painter): void {
     const source = sourceCache.getSource();
-    if (!(source instanceof RasterArrayTileSource) || !source.loaded()) return;
+    if (source.type !== 'raster-array' || !source.loaded()) return;
 
     const sourceLayer = layer.sourceLayer || (source.rasterLayerIds && source.rasterLayerIds[0]);
     if (!sourceLayer) return;

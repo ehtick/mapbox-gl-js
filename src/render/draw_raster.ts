@@ -21,13 +21,13 @@ import {GLOBE_ZOOM_THRESHOLD_MIN} from '../geo/projection/globe_constants';
 import {mat4} from "gl-matrix";
 import {mercatorXfromLng, mercatorYfromLat} from '../geo/mercator_coordinate';
 import {COLOR_MIX_FACTOR} from '../style/style_layer/raster_style_layer';
-import RasterArrayTile from '../source/raster_array_tile';
-import RasterArrayTileSource from '../source/raster_array_tile_source';
 import ColorMode from '../gl/color_mode';
 
 import type Transform from '../geo/transform';
 import type {OverscaledTileID} from '../source/tile_id';
 import type Tile from '../source/tile';
+import type RasterArrayTile from '../source/raster_array_tile';
+import type RasterArrayTileSource from '../source/raster_array_tile_source';
 import type Context from '../gl/context';
 import type Painter from './painter';
 import type SourceCache from '../source/source_cache';
@@ -458,7 +458,7 @@ function cutoffParamsForElevation(tr: Transform): [number, number, number, numbe
 
 export function prepare(layer: RasterStyleLayer, sourceCache: SourceCache, _: Painter): void {
     const source = sourceCache.getSource();
-    if (!(source instanceof RasterArrayTileSource) || !source.loaded()) return;
+    if (source.type !== 'raster-array' || !source.loaded()) return;
 
     const sourceLayer = layer.sourceLayer || (source.rasterLayerIds && source.rasterLayerIds[0]);
     if (!sourceLayer) return;
@@ -490,8 +490,8 @@ function getTextureDescriptor(
 ): TextureDescriptor | void {
     if (!tile) return;
 
-    if (source instanceof RasterArrayTileSource && tile instanceof RasterArrayTile) {
-        return source.getTextureDescriptor(tile, layer, true);
+    if (source.type === 'raster-array') {
+        return source.getTextureDescriptor(tile as RasterArrayTile, layer, true);
     }
 
     return {

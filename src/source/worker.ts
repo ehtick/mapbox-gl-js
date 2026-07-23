@@ -2,12 +2,16 @@ import Actor from '../util/actor';
 import StyleLayerIndex from '../style/style_layer_index';
 import VectorTileWorkerSource from './vector_tile_worker_source';
 import RasterDEMTileWorkerSource from './raster_dem_tile_worker_source';
-import RasterArrayTileWorkerSource from './raster_array_tile_worker_source';
 import GeoJSONWorkerSource from './geojson_worker_source';
 import * as Standard from '../../modules/standard_worker';
+import * as RasterArrayWorker from '../../modules/raster_array_worker';
 import assert from '../style-spec/util/assert';
 import {plugin as globalRTLTextPlugin, rtlPluginStatus} from './rtl_text_plugin';
 import {enforceCacheSizeLimit} from '../util/tile_request_cache';
+// `LRUCache` is used eagerly on the main thread but only lazily on the worker (via the MRT
+// decoder), which puts it in its own tiny chunk. Referencing it from the worker entry folds
+// it into the shared chunk both entries already load.
+import '../util/lru';
 import {PerformanceUtils} from '../util/performance';
 import {Event} from '../util/evented';
 import {getProjection} from '../geo/projection/index';
@@ -19,6 +23,7 @@ import type Projection from '../geo/projection/projection';
 import type {ImageId} from '../style-spec/expression/types/image_id';
 import type {RtlTextPlugin} from './rtl_text_plugin';
 import type {MainInbox, WorkerInbox} from '../util/actor_messages';
+import type RasterArrayTileWorkerSource from './raster_array_tile_worker_source';
 import type {WorkerSourceType, WorkerSource, WorkerSourceConstructor, WorkerSourceRequest} from './worker_source';
 import type {TileProvider} from './tile_provider';
 import type {StyleModelMap} from '../style/style_mode';
@@ -77,9 +82,9 @@ export default class MapWorker {
             'vector': VectorTileWorkerSource,
             'geojson': GeoJSONWorkerSource,
             'raster-dem': RasterDEMTileWorkerSource,
-            'raster-array': RasterArrayTileWorkerSource,
-            // 'batched-model' is registered lazily on first `loadTile` (see below) — its
-            // worker source class lives in the Standard module.
+            // 'raster-array' and 'batched-model' are registered lazily on first `loadTile`
+            // (see below): the raster-array worker source drags in the MRT decoder, and the
+            // 'batched-model' worker source lives in the Standard module.
         };
 
         // [mapId][scope][sourceType][sourceName] => worker source instance
@@ -235,10 +240,32 @@ export default class MapWorker {
             }
             this.workerSourceTypes['batched-model'] = Standard.Tiled3dModelWorkerSource;
         }
+        if (params.type === 'raster-array') {
+            await this.ensureRasterArrayWorkerSource();
+        }
         return this.getWorkerSource(mapId, params).loadTile(params);
     }
 
-    decodeRasterArray(mapId: number, params: WorkerInbox['decodeRasterArray']['params']): Promise<WorkerInbox['decodeRasterArray']['result']> {
+    // Preload gate broadcast by the main-thread `RasterArrayTileSource` before any band fetch
+    // (see `ensureRasterArraySource` in actor_messages for why it must precede `decodeRasterArray`).
+    async ensureRasterArraySource(_mapId: number, _params: WorkerInbox['ensureRasterArraySource']['params']): Promise<void> {
+        await this.ensureRasterArrayWorkerSource();
+    }
+
+    // Loads the raster-array worker source (and, transitively, the MRT decoder) on demand,
+    // keeping it out of the always-loaded worker bundle. Idempotent and safe to call
+    // concurrently — `import()` is module-cached.
+    async ensureRasterArrayWorkerSource(): Promise<void> {
+        if (this.workerSourceTypes['raster-array']) return;
+        await RasterArrayWorker.prepareRasterArray();
+        if (!RasterArrayWorker.RasterArrayTileWorkerSource) {
+            throw new Error('Could not load raster-array module for "raster-array" source.');
+        }
+        this.workerSourceTypes['raster-array'] = RasterArrayWorker.RasterArrayTileWorkerSource;
+    }
+
+    async decodeRasterArray(mapId: number, params: WorkerInbox['decodeRasterArray']['params']): Promise<WorkerInbox['decodeRasterArray']['result']> {
+        await this.ensureRasterArrayWorkerSource();
         return (this.getWorkerSource(mapId, params) as RasterArrayTileWorkerSource).decodeRasterArray(params);
     }
 

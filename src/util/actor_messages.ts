@@ -66,6 +66,14 @@ export type WorkerInbox = {
         result: void;
     };
 
+    // Preloads the lazily-imported raster-array worker source (and, transitively, the MRT decoder)
+    // so its serializable classes are registered before the first `decodeRasterArray` message,
+    // whose payload carries an `MRTDecodingBatch` instance, is deserialized.
+    'ensureRasterArraySource': {
+        params: void;
+        result: void;
+    };
+
     'geojson.getClusterChildren': {
         params: {clusterId: number; source: string; scope: string;};
         result: GeoJSON.Feature[];

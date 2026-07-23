@@ -56,6 +56,11 @@ class RasterArrayTileSource extends RasterTileSource<'raster-array'> {
     private _loadTilePending: Record<string, Promise<MapboxRasterTile>>;
     private _loadTileLoaded: Record<string, boolean>;
 
+    // Resolves once every worker has preloaded the raster-array source (see
+    // `ensureRasterArraySource`). Kicked off on the first `loadTile`; tiles await it before
+    // their first `decodeRasterArray`.
+    _workerReady: Promise<void> | undefined;
+
     override map: MapboxMap;
 
     /**
@@ -92,6 +97,13 @@ class RasterArrayTileSource extends RasterTileSource<'raster-array'> {
 
         tile.source = this.id;
         tile.scope = this.scope;
+        if (this._workerReady === undefined) {
+            this._workerReady = this.dispatcher.send('ensureRasterArraySource', undefined).then((): void => {});
+            // Avoid an unhandled rejection (e.g. "Actor removed" on teardown) when no tile consumes
+            // this promise; tiles that do attach their own rejection handler via `this.workerReady`.
+            this._workerReady.catch(() => {});
+        }
+        tile.workerReady = this._workerReady;
         if (!tile.actor) tile.actor = this.dispatcher.getActor();
 
         const controller = new AbortController();

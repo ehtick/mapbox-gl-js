@@ -1,4 +1,3 @@
-import RasterArrayTileSource from '../source/raster_array_tile_source';
 import {ImageId} from '../style-spec/expression/types/image_id';
 
 import type SourceCache from '../source/source_cache';
@@ -52,7 +51,7 @@ export class ImageProvider {
 
         // Only RasterArrayTileSource is supported
         const source = this.sourceCache.getSource();
-        if (!(source instanceof RasterArrayTileSource)) return styleImages;
+        if (source.type !== 'raster-array') return styleImages;
 
         const tiles = tileIDs.map(tileID => this.sourceCache.getTile(tileID) as RasterArrayTile);
         const images = source.getImages(tiles, Array.from(this.pendingRequests));

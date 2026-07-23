@@ -4,6 +4,7 @@ import Texture from '../render/texture';
 import {RGBAImage} from '../util/image';
 import {getArrayBuffer} from '../util/ajax';
 import {makeFQID} from '../util/fqid';
+import {registerRasterArrayTile} from './raster_array_plugin';
 import {MapboxRasterTile} from '../data/mrt/mrt.esm.js';
 
 import type Painter from '../render/painter';
@@ -47,6 +48,9 @@ class RasterArrayTile extends Tile implements Tile {
 
     source?: string;
     scope?: string;
+
+    // Set by RasterArrayTileSource; resolves once workers have preloaded the MRT decoder.
+    workerReady?: Promise<void>;
 
     _mrt: MapboxRasterTile | null | undefined;
     _isHeaderLoaded: boolean;
@@ -241,29 +245,42 @@ class RasterArrayTile extends Tile implements Tile {
         const onDataLoaded = (err?: Error | null, buffer?: ArrayBuffer | null) => {
             if (err) return callback(err);
 
-            const params = {
-                type: 'raster-array',
-                source: this.source,
-                scope: this.scope,
-                tileID: this.tileID,
-                uid: this.uid,
-                buffer,
-                task
-            };
-
-            const decodeRequest = actor.sendCancelable('decodeRasterArray', params, {}, onDataDecoded);
+            let decodeRequest: AbortController | undefined;
+            let aborted = false;
 
             if (layerId !== null) {
                 const workQueue = this._workQueuePerLayer.get(layerId) || [];
 
                 workQueue.push(() => {
-                    decodeRequest.abort();
+                    aborted = true;
+                    if (decodeRequest) decodeRequest.abort();
                     task.cancel();
                 });
 
                 if (!this._workQueuePerLayer.has(layerId)) {
                     this._workQueuePerLayer.set(layerId, workQueue);
                 }
+            }
+
+            // Defer the decode until workers have preloaded the MRT module (see `workerReady`).
+            const send = () => {
+                if (aborted) return;
+                const params = {
+                    type: 'raster-array',
+                    source: this.source,
+                    scope: this.scope,
+                    tileID: this.tileID,
+                    uid: this.uid,
+                    buffer,
+                    task
+                };
+                decodeRequest = actor.sendCancelable('decodeRasterArray', params, {}, onDataDecoded);
+            };
+
+            if (this.workerReady !== undefined) {
+                this.workerReady.then(send).catch((e: Error) => callback(e));
+            } else {
+                send();
             }
         };
 
@@ -399,5 +416,9 @@ class RasterArrayTile extends Tile implements Tile {
     }
 
 }
+
+// Registers the constructor so core-resident `SourceCache` can build raster-array tiles
+// without a static value import of this class (which would anchor the MRT decoder into core).
+registerRasterArrayTile((tileID, size, tileZoom, painter, isRaster) => new RasterArrayTile(tileID, size, tileZoom, painter, isRaster));
 
 export default RasterArrayTile;

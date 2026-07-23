@@ -23,7 +23,9 @@ function esmConfig(dir: string, workerSuffix: string, emitVisualizer = false): R
         output: {
             dir,
             chunkFileNames: (chunk) => {
-                if (chunk.isDynamicEntry) {
+                // Single-facade dynamic entries are named by facade id; a chunk shared across
+                // several dynamic imports has a null facadeModuleId and falls through below.
+                if (chunk.isDynamicEntry && chunk.facadeModuleId) {
                     if (chunk.facadeModuleId.endsWith('hd_main_imports.ts')) return 'hd.main.js';
                     if (chunk.facadeModuleId.endsWith('hd_worker_imports.ts')) return 'hd.worker.js';
                     if (chunk.facadeModuleId.endsWith('standard_main_imports.ts')) return 'standard.main.js';
@@ -42,6 +44,10 @@ function esmConfig(dir: string, workerSuffix: string, emitVisualizer = false): R
                 if (chunk.moduleIds.some(id => id.endsWith('/3d-style/data/model.ts'))) return 'hd_standard.model.js';
                 // The Standard model buckets are shared between the Standard main and worker chunks only.
                 if (chunk.moduleIds.some(id => id.endsWith('/3d-style/data/bucket/model_bucket.ts'))) return 'standard.shared.js';
+                // The raster-array capability splits into three reachability sets.
+                if (chunk.moduleIds.some(id => id.endsWith('/src/data/mrt/mrt.esm.js'))) return 'raster_array.shared.js'; // MRT decoder: shared by the main and worker raster-array chunks
+                if (chunk.moduleIds.some(id => id.endsWith('/src/source/raster_array_tile_worker_source.ts'))) return 'raster_array.worker.js'; // worker source: worker's lazy raster-array import only
+                if (chunk.moduleIds.some(id => id.endsWith('/src/source/raster_array_tile.ts'))) return 'raster_array.main.js'; // source/tile classes: main raster-array import only
                 return 'shared.js'; // catch-all: the large gl-matrix / startup utilities chunk
             },
             experimentalMinChunkSize: 5000,
@@ -100,7 +106,7 @@ export default (): RollupOptions[] => {
     ];
 };
 
-const filesToSub = new Set(['hd_main', 'hd_worker', 'standard_main', 'standard_registry', 'standard_worker', 'debug']);
+const filesToSub = new Set(['hd_main', 'hd_worker', 'standard_main', 'standard_registry', 'standard_worker', 'raster_array_main', 'raster_array_worker', 'debug']);
 
 /**
  * Guards the worker/main lazy-chunk boundary.

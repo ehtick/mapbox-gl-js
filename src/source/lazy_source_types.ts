@@ -1,5 +1,6 @@
 import {getType, setType} from './source';
 import {Standard, prepareStandard} from '../../modules/standard_main';
+import {RasterArray, prepareRasterArray} from '../../modules/raster_array_main';
 
 import type {ISource} from './source';
 import type {Class} from '../types/class';
@@ -15,7 +16,8 @@ import type {Source} from './source_types';
 // by `Style`) keeps the Standard main chunk out of the worker bundle.
 const lazySourceLoaders: Partial<Record<Source['type'], () => Promise<Class<ISource> | undefined>>> = {
     model: () => prepareStandard().then(() => Standard.ModelSource as Class<ISource> | undefined),
-    'batched-model': () => prepareStandard().then(() => Standard.Tiled3dModelSource as Class<ISource> | undefined)
+    'batched-model': () => prepareStandard().then(() => Standard.Tiled3dModelSource as Class<ISource> | undefined),
+    'raster-array': () => prepareRasterArray().then(() => RasterArray.RasterArrayTileSource as Class<ISource> | undefined)
 };
 
 // True for a source type whose class is registered lazily (loaded on demand). Callers

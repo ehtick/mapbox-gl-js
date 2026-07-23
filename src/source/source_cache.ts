@@ -2,7 +2,7 @@ import assert from '../style-spec/util/assert';
 import Point from '@mapbox/point-geometry';
 import Tile from './tile';
 import {RenderSourceType} from './render_source_type';
-import RasterArrayTile from './raster_array_tile';
+import {createRasterArrayTile} from './raster_array_plugin';
 import {Event, ErrorEvent, Evented} from '../util/evented';
 import TileCache from './tile_cache';
 import {asyncAll, keysDifference, clamp} from '../util/util';
@@ -933,7 +933,7 @@ class SourceCache extends Evented {
             const isRasterArray = this._source.type === 'raster-array';
 
             tile = isRasterArray ?
-                new RasterArrayTile(tileID, size, this.transform.tileZoom, painter, this._isRaster) :
+                createRasterArrayTile(tileID, size, this.transform.tileZoom, painter, this._isRaster) :
                 new Tile(tileID, size, this.transform.tileZoom, painter, this._isRaster, this._source.worldview);
 
             this._loadTile(tile, this._tileLoaded.bind(this, tile, tileID.key, tile.state));

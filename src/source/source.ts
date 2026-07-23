@@ -2,7 +2,6 @@ import {bindAll} from '../util/util';
 import vector from '../source/vector_tile_source';
 import raster from '../source/raster_tile_source';
 import rasterDem from '../source/raster_dem_tile_source';
-import rasterArray from '../source/raster_array_tile_source';
 import geojson from '../source/geojson_source';
 import video from '../source/video_source';
 import image from '../source/image_source';
@@ -117,7 +116,6 @@ const sourceTypes: Partial<Record<Source['type'], Class<ISource>>> = {
     vector,
     raster,
     'raster-dem': rasterDem,
-    'raster-array': rasterArray,
     geojson,
     video,
     image,
