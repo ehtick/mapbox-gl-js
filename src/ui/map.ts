@@ -4593,7 +4593,9 @@ export class Map extends Camera {
                 now,
                 fadeDuration,
                 pitch,
-                transition: this.style.transition,
+                // Snap transitions before `load` so initial light transitions don't spin repaints;
+                // after `load`, user-triggered transitions must animate normally.
+                transition: this._loaded ? this.style.transition : {duration: 0, delay: 0},
                 worldview: this._worldview
             });
 
@@ -4674,10 +4676,6 @@ export class Map extends Camera {
         // Background patterns are rasterized in a worker thread, while
         // it's still in progress we need to keep rendering
         if (this.style && this.style.imageManager.hasPatternsInFlight()) {
-            this._styleDirty = true;
-        }
-
-        if (this.style && (!this.style.modelManager.isLoaded())) {
             this._styleDirty = true;
         }
 
